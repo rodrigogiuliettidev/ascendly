@@ -1,0 +1,35 @@
+name: Cron Streak Warnings
+
+on:
+  schedule:
+    - cron: "0 20 * * *"
+  workflow_dispatch:
+
+jobs:
+  call-streak-warnings-endpoint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Validate required secrets
+        run: |
+          if [ -z "${{ secrets.APP_BASE_URL }}" ]; then
+            echo "APP_BASE_URL is not set"
+            exit 1
+          fi
+          if [ -z "${{ secrets.CRON_SECRET }}" ]; then
+            echo "CRON_SECRET is not set"
+            exit 1
+          fi
+
+      - name: Call streak warnings cron endpoint
+        run: |
+          BASE_URL="${{ secrets.APP_BASE_URL }}"
+          BASE_URL="${BASE_URL%/}"
+
+          echo "Calling ${BASE_URL}/api/cron/streak-warnings"
+
+          curl --fail --show-error --silent \
+            --request POST \
+            --header "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            --header "Content-Type: application/json" \
+            "${BASE_URL}/api/cron/streak-warnings"
