@@ -2,6 +2,23 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { startOfDay } from "@/lib/date";
 
+function getCurrentMinutesInTimeZone(timeZone: string): number {
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+
+  const parts = formatter.formatToParts(new Date());
+  const hour = Number(parts.find((part) => part.type === "hour")?.value ?? "0");
+  const minute = Number(
+    parts.find((part) => part.type === "minute")?.value ?? "0",
+  );
+
+  return hour * 60 + minute;
+}
+
 export async function POST(request: Request) {
   try {
     // Verify cron secret
@@ -11,8 +28,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const now = new Date();
-    const currentMinutes = now.getUTCHours() * 60 + now.getUTCMinutes();
+    const appTimeZone = process.env.APP_TIMEZONE || "America/Sao_Paulo";
+    const currentMinutes = getCurrentMinutesInTimeZone(appTimeZone);
     const todayStart = startOfDay();
 
     // Find habits with reminder at current time
@@ -31,7 +48,15 @@ export async function POST(request: Request) {
       },
     });
 
-    console.log("[CronReminders] Found " + habits.length + " habits to remind at minute " + currentMinutes);
+    console.log(
+      "[CronReminders] Found " +
+        habits.length +
+        " habits to remind at minute " +
+        currentMinutes +
+        " (tz: " +
+        appTimeZone +
+        ")",
+    );
 
     for (const habit of habits) {
       // Create in-app notification
@@ -49,12 +74,18 @@ export async function POST(request: Request) {
         try {
           const webPush = require("web-push");
           const subscription = JSON.parse(habit.user.fcmToken);
-          const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || "";
+          const VAPID_PUBLIC_KEY =
+            process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || "";
           const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || "";
-          const VAPID_SUBJECT = process.env.VAPID_SUBJECT || "mailto:admin@ascendly.app";
+          const VAPID_SUBJECT =
+            process.env.VAPID_SUBJECT || "mailto:admin@ascendly.app";
 
           if (VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
-            webPush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
+            webPush.setVapidDetails(
+              VAPID_SUBJECT,
+              VAPID_PUBLIC_KEY,
+              VAPID_PRIVATE_KEY,
+            );
             await webPush.sendNotification(
               subscription,
               JSON.stringify({
@@ -62,15 +93,23 @@ export async function POST(request: Request) {
                 body: "Don't forget: " + habit.title + ".",
                 url: "/habits",
                 tag: "reminder-" + habit.id,
-              })
+              }),
             );
           }
         } catch (pushError) {
-          console.error("[CronReminders] Push error for habit " + habit.id + ":", pushError);
+          console.error(
+            "[CronReminders] Push error for habit " + habit.id + ":",
+            pushError,
+          );
         }
       }
 
-      console.log("[CronReminders] \u{1F514} Reminder sent for habit \"" + habit.title + "\" to user " + habit.userId);
+      console.log(
+        '[CronReminders] \u{1F514} Reminder sent for habit "' +
+          habit.title +
+          '" to user ' +
+          habit.userId,
+      );
     }
 
     return NextResponse.json({ sent: habits.length });
@@ -78,7 +117,7 @@ export async function POST(request: Request) {
     console.error("POST /api/cron/reminders error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
