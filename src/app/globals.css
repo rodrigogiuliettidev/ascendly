@@ -1,0 +1,123 @@
+@import "tailwindcss";
+@import "tailwindcss/theme" layer(theme);
+@import "tailwindcss/utilities" layer(utilities);
+
+@custom-variant dark (&:is(.dark *));
+
+@layer theme {
+  :root {
+    --radius: 0.75rem;
+
+    /* Core palette – black base + orange accent */
+    --background: 0 0% 4.3%;
+    --foreground: 0 0% 100%;
+    --card: 0 0% 7.1%;
+    --card-foreground: 0 0% 100%;
+    --popover: 0 0% 7.1%;
+    --popover-foreground: 0 0% 100%;
+    --primary: 29 100% 50%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 0 0% 10.2%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 0 0% 10.2%;
+    --muted-foreground: 0 0% 63%;
+    --accent: 0 0% 12%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 12%;
+    --input: 0 0% 12%;
+    --ring: 29 100% 50%;
+
+    /* Ascendly gamification tokens */
+    --orange: 29 100% 50%;
+    --orange-light: 30 100% 62%;
+    --streak: 29 100% 50%;
+    --xp: 29 100% 50%;
+    --coin: 45 93% 47%;
+    --gold: 43 96% 56%;
+    --silver: 0 0% 75%;
+    --bronze: 25 60% 44%;
+    --success: 142 71% 45%;
+  }
+}
+
+@layer base {
+  * {
+    border-color: hsl(var(--border));
+  }
+
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-feature-settings: "rlig" 1, "calt" 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--muted));
+    border-radius: 999px;
+  }
+}
+
+/* Shared animation keyframes */
+@layer utilities {
+  @keyframes glow-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+  }
+  @keyframes slide-up {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fill-bar {
+    from { transform: translateX(-100%); }
+  }
+
+  .animate-glow-pulse {
+    animation: glow-pulse 2s ease-in-out infinite;
+  }
+  .animate-slide-up {
+    animation: slide-up 0.35s ease-out;
+  }
+  .animate-fill-bar {
+    animation: fill-bar 0.8s ease-out;
+  }
+
+  @keyframes xp-pop {
+    0% { opacity: 0; transform: scale(0.5) translateY(20px); }
+    50% { opacity: 1; transform: scale(1.2) translateY(-10px); }
+    80% { transform: scale(1) translateY(-30px); }
+    100% { opacity: 0; transform: scale(0.8) translateY(-60px); }
+  }
+  @keyframes xp-float {
+    0% { opacity: 1; transform: translateY(0); }
+    100% { opacity: 0; transform: translateY(-30px); }
+  }
+  @keyframes pulse-glow {
+    0%, 100% { box-shadow: 0 0 5px rgba(255, 122, 0, 0.3); }
+    50% { box-shadow: 0 0 20px rgba(255, 122, 0, 0.6); }
+  }
+  @keyframes confetti {
+    0% { opacity: 1; transform: translateY(0) rotate(0deg); }
+    100% { opacity: 0; transform: translateY(-40px) rotate(180deg); }
+  }
+
+  .animate-xp-pop {
+    animation: xp-pop 1.5s ease-out forwards;
+  }
+  .animate-xp-float {
+    animation: xp-float 1.2s ease-out forwards;
+  }
+  .animate-pulse-glow {
+    animation: pulse-glow 2s ease-in-out infinite;
+  }
+}

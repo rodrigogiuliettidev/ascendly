@@ -1,0 +1,15 @@
+{
+  "name": "Ascendly",
+  "short_name": "Ascendly",
+  "description": "Gamified productivity platform - complete habits, earn XP, climb rankings",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#0B0B0B",
+  "theme_color": "#FF7A00",
+  "orientation": "portrait",
+  "scope": "/",
+  "icons": [],
+  "categories": ["productivity", "lifestyle"],
+  "screenshots": [],
+  "prefer_related_applications": false
+}
