@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { cn } from "@/lib/utils";
 
 interface HeatmapDay {
   date: string;
@@ -21,7 +22,23 @@ function getIntensityClass(count: number): string {
   return "bg-[#FF7A00]";
 }
 
+function formatDate(dateStr: string): string {
+  const date = new Date(dateStr);
+  return date.toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
+}
+
 export function Heatmap({ data, weeks = 16 }: HeatmapProps) {
+  const [tooltip, setTooltip] = useState<{
+    date: string;
+    count: number;
+    x: number;
+    y: number;
+  } | null>(null);
+
   const grid = useMemo(() => {
     const today = new Date();
     const totalDays = weeks * 7;
@@ -58,8 +75,26 @@ export function Heatmap({ data, weeks = 16 }: HeatmapProps) {
 
   const dayLabels = ["", "Mon", "", "Wed", "", "Fri", ""];
 
+  const handleMouseEnter = (
+    e: React.MouseEvent,
+    date: string,
+    count: number,
+  ) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    setTooltip({
+      date,
+      count,
+      x: rect.left + rect.width / 2,
+      y: rect.top,
+    });
+  };
+
+  const handleMouseLeave = () => {
+    setTooltip(null);
+  };
+
   return (
-    <div className="w-full">
+    <div className="w-full relative">
       <div className="flex gap-1">
         {/* Day labels */}
         <div className="flex flex-col gap-[3px] mr-1">
@@ -85,8 +120,15 @@ export function Heatmap({ data, weeks = 16 }: HeatmapProps) {
                 return (
                   <div
                     key={di}
-                    className={`w-[14px] h-[14px] rounded-[3px] ${getIntensityClass(day.count)} transition-colors duration-200 hover:ring-1 hover:ring-[#FF7A00]/50 cursor-pointer`}
-                    title={`${day.date}: ${day.count} habits`}
+                    className={cn(
+                      "w-[14px] h-[14px] rounded-[3px] transition-all duration-200 cursor-pointer",
+                      getIntensityClass(day.count),
+                      "hover:ring-2 hover:ring-[#FF7A00]/50 hover:scale-110",
+                    )}
+                    onMouseEnter={(e) =>
+                      handleMouseEnter(e, day.date, day.count)
+                    }
+                    onMouseLeave={handleMouseLeave}
                   />
                 );
               })}
@@ -95,13 +137,34 @@ export function Heatmap({ data, weeks = 16 }: HeatmapProps) {
         </div>
       </div>
 
+      {/* Tooltip */}
+      {tooltip && (
+        <div
+          className="fixed z-50 px-2.5 py-1.5 rounded-lg bg-[#1A1A1A] border border-white/10 shadow-xl pointer-events-none transform -translate-x-1/2 -translate-y-full"
+          style={{
+            left: tooltip.x,
+            top: tooltip.y - 8,
+          }}
+        >
+          <p className="text-xs font-medium text-white">
+            {tooltip.count} habit{tooltip.count !== 1 ? "s" : ""}
+          </p>
+          <p className="text-[10px] text-[#A1A1A1]">
+            {formatDate(tooltip.date)}
+          </p>
+        </div>
+      )}
+
       {/* Legend */}
       <div className="flex items-center justify-end gap-1 mt-3">
         <span className="text-[10px] text-[#A1A1A1] mr-1">Less</span>
         {[0, 1, 2, 3, 4].map((level) => (
           <div
             key={level}
-            className={`w-[12px] h-[12px] rounded-[2px] ${getIntensityClass(level)}`}
+            className={cn(
+              "w-[12px] h-[12px] rounded-[2px]",
+              getIntensityClass(level),
+            )}
           />
         ))}
         <span className="text-[10px] text-[#A1A1A1] ml-1">More</span>

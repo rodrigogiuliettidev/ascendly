@@ -1,7 +1,17 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Sparkles, Coins, Flame, Trophy, Target, Loader2, Bell, Clock, Shield } from "lucide-react";
+import {
+  Sparkles,
+  Coins,
+  Flame,
+  Trophy,
+  Target,
+  Loader2,
+  Bell,
+  Clock,
+  Shield,
+} from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
@@ -32,7 +42,12 @@ function xpForLevel(level: number) {
 }
 
 function getInitials(name: string): string {
-  return name.split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2);
+  return name
+    .split(" ")
+    .map((w) => w[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
 }
 
 // Colors per achievement type
@@ -80,7 +95,9 @@ export default function ProfilePage() {
     const updated = { ...notifPrefs, [key]: !notifPrefs[key] };
     setNotifPrefs(updated);
     try {
-      await patch("/api/users/notification-preferences", { [key]: updated[key] });
+      await patch("/api/users/notification-preferences", {
+        [key]: updated[key],
+      });
     } catch (err) {
       // Revert on error
       setNotifPrefs(notifPrefs);
@@ -101,7 +118,8 @@ export default function ProfilePage() {
   const currentLevelXp = xpForLevel(level);
   const nextLevelXp = xpForLevel(level + 1);
   const range = nextLevelXp - currentLevelXp;
-  const progress = range > 0 ? Math.round(((xp - currentLevelXp) / range) * 100) : 100;
+  const progress =
+    range > 0 ? Math.round(((xp - currentLevelXp) / range) * 100) : 100;
   const unlockedCount = achievements.filter((a) => a.unlockedAt).length;
 
   return (
@@ -111,7 +129,9 @@ export default function ProfilePage() {
         <div className="h-24 bg-gradient-to-r from-[#FF7A00]/30 via-[#FF9F3F]/20 to-[#FF7A00]/10" />
         <div className="px-5 pb-5 -mt-10">
           <Avatar className="h-20 w-20 ring-4 ring-[#121212] shadow-xl shadow-[#FF7A00]/10 mb-3">
-            <AvatarFallback className="text-2xl">{getInitials(user.name)}</AvatarFallback>
+            <AvatarFallback className="text-2xl">
+              {getInitials(user.name)}
+            </AvatarFallback>
           </Avatar>
           <h1 className="text-xl font-bold text-white">{user.name}</h1>
           <p className="text-sm text-[#A1A1A1]">{user.email}</p>
@@ -124,7 +144,9 @@ export default function ProfilePage() {
                 </div>
                 <span className="font-medium text-white">Level {level}</span>
               </div>
-              <span className="text-[#A1A1A1]">{xp.toLocaleString()} / {nextLevelXp.toLocaleString()} XP</span>
+              <span className="text-[#A1A1A1]">
+                {xp.toLocaleString()} / {nextLevelXp.toLocaleString()} XP
+              </span>
             </div>
             <Progress
               value={progress}
@@ -137,10 +159,30 @@ export default function ProfilePage() {
 
       {/* Stats Row */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatItem icon={Sparkles} label="Total XP" value={xp.toLocaleString()} color="#FF7A00" />
-        <StatItem icon={Coins} label="Coins" value={(user.coins ?? 0).toLocaleString()} color="#EAB308" />
-        <StatItem icon={Flame} label="Streak" value={`${user.streak ?? 0} days`} color="#FF7A00" />
-        <StatItem icon={Target} label="Level" value={level.toString()} color="#10B981" />
+        <StatItem
+          icon={Sparkles}
+          label="Total XP"
+          value={xp.toLocaleString()}
+          color="#FF7A00"
+        />
+        <StatItem
+          icon={Coins}
+          label="Coins"
+          value={(user.coins ?? 0).toLocaleString()}
+          color="#EAB308"
+        />
+        <StatItem
+          icon={Flame}
+          label="Streak"
+          value={`${user.streak ?? 0} days`}
+          color="#FF7A00"
+        />
+        <StatItem
+          icon={Target}
+          label="Level"
+          value={level.toString()}
+          color="#10B981"
+        />
       </div>
 
       {/* Achievements */}
@@ -150,12 +192,16 @@ export default function ProfilePage() {
             <Trophy className="h-4 w-4 text-[#FF9F3F]" />
             Achievements
           </h2>
-          <span className="text-xs text-[#A1A1A1]">{unlockedCount}/{achievements.length} unlocked</span>
+          <span className="text-xs text-[#A1A1A1]">
+            {unlockedCount}/{achievements.length} unlocked
+          </span>
         </div>
 
         {achievements.length === 0 ? (
           <div className="rounded-2xl border border-white/[0.06] bg-[#121212] p-8 text-center">
-            <p className="text-[#A1A1A1] text-sm">No achievements yet. Keep going!</p>
+            <p className="text-[#A1A1A1] text-sm">
+              No achievements yet. Keep going!
+            </p>
           </div>
         ) : (
           <div className="grid grid-cols-3 gap-3 sm:grid-cols-3 lg:grid-cols-4">
@@ -169,17 +215,19 @@ export default function ProfilePage() {
                     "flex flex-col items-center rounded-2xl border p-4 text-center transition-all animate-slide-up",
                     unlocked
                       ? "border-white/[0.06] bg-[#121212] hover:border-white/10"
-                      : "border-white/[0.03] bg-[#121212]/50 opacity-40"
+                      : "border-white/[0.03] bg-[#121212]/50 opacity-40",
                   )}
                   style={{ animationDelay: `${i * 40}ms` }}
                 >
                   <div
                     className={cn(
                       "flex h-12 w-12 items-center justify-center rounded-xl mb-2",
-                      unlocked ? "shadow-lg" : ""
+                      unlocked ? "shadow-lg" : "",
                     )}
                     style={{
-                      backgroundColor: unlocked ? `${color}15` : "rgba(255,255,255,0.03)",
+                      backgroundColor: unlocked
+                        ? `${color}15`
+                        : "rgba(255,255,255,0.03)",
                     }}
                   >
                     <Trophy
@@ -187,15 +235,22 @@ export default function ProfilePage() {
                       style={{ color: unlocked ? color : "#A1A1A1" }}
                     />
                   </div>
-                  <p className={cn(
-                    "text-xs font-semibold",
-                    unlocked ? "text-white" : "text-[#A1A1A1]"
-                  )}>
+                  <p
+                    className={cn(
+                      "text-xs font-semibold",
+                      unlocked ? "text-white" : "text-[#A1A1A1]",
+                    )}
+                  >
                     {achievement.title}
                   </p>
-                  <p className="text-[10px] text-[#A1A1A1] mt-0.5 line-clamp-2">{achievement.description}</p>
+                  <p className="text-[10px] text-[#A1A1A1] mt-0.5 line-clamp-2">
+                    {achievement.description}
+                  </p>
                   {unlocked && (
-                    <span className="mt-1.5 text-[9px] font-medium px-2 py-0.5 rounded-full" style={{ backgroundColor: `${color}15`, color }}>
+                    <span
+                      className="mt-1.5 text-[9px] font-medium px-2 py-0.5 rounded-full"
+                      style={{ backgroundColor: `${color}15`, color }}
+                    >
                       Unlocked
                     </span>
                   )}
@@ -263,7 +318,13 @@ export default function ProfilePage() {
   );
 }
 
-function NotifToggle({ icon: Icon, label, description, enabled, onToggle }: {
+function NotifToggle({
+  icon: Icon,
+  label,
+  description,
+  enabled,
+  onToggle,
+}: {
   icon: typeof Bell;
   label: string;
   description: string;
@@ -285,13 +346,13 @@ function NotifToggle({ icon: Icon, label, description, enabled, onToggle }: {
         onClick={onToggle}
         className={cn(
           "relative h-6 w-11 rounded-full transition-colors duration-200",
-          enabled ? "bg-[#FF7A00]" : "bg-white/10"
+          enabled ? "bg-[#FF7A00]" : "bg-white/10",
         )}
       >
         <span
           className={cn(
             "absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform duration-200",
-            enabled && "translate-x-5"
+            enabled && "translate-x-5",
           )}
         />
       </button>
@@ -299,7 +360,12 @@ function NotifToggle({ icon: Icon, label, description, enabled, onToggle }: {
   );
 }
 
-function StatItem({ icon: Icon, label, value, color }: {
+function StatItem({
+  icon: Icon,
+  label,
+  value,
+  color,
+}: {
   icon: typeof Sparkles;
   label: string;
   value: string;

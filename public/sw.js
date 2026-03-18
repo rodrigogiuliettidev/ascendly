@@ -14,7 +14,7 @@ self.addEventListener("install", (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       return cache.addAll(PRECACHE_URLS);
-    })
+    }),
   );
   self.skipWaiting();
 });
@@ -27,9 +27,9 @@ self.addEventListener("activate", (event) => {
       return Promise.all(
         keys
           .filter((key) => key !== CACHE_NAME)
-          .map((key) => caches.delete(key))
+          .map((key) => caches.delete(key)),
       );
-    })
+    }),
   );
   self.clients.claim();
 });
@@ -43,7 +43,7 @@ self.addEventListener("fetch", (event) => {
         return caches.match(OFFLINE_URL).then((response) => {
           return response || new Response("Offline", { status: 503 });
         });
-      })
+      }),
     );
   }
 });
@@ -77,7 +77,7 @@ self.addEventListener("push", (event) => {
   };
 
   event.waitUntil(
-    self.registration.showNotification(data.title || "Ascendly", options)
+    self.registration.showNotification(data.title || "Ascendly", options),
   );
 });
 
@@ -91,16 +91,18 @@ self.addEventListener("notificationclick", (event) => {
   const url = event.notification.data?.url || "/dashboard";
 
   event.waitUntil(
-    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
-      // Focus existing window if available
-      for (const client of clients) {
-        if (client.url.includes(self.location.origin) && "focus" in client) {
-          client.navigate(url);
-          return client.focus();
+    self.clients
+      .matchAll({ type: "window", includeUncontrolled: true })
+      .then((clients) => {
+        // Focus existing window if available
+        for (const client of clients) {
+          if (client.url.includes(self.location.origin) && "focus" in client) {
+            client.navigate(url);
+            return client.focus();
+          }
         }
-      }
-      // Open new window
-      return self.clients.openWindow(url);
-    })
+        // Open new window
+        return self.clients.openWindow(url);
+      }),
   );
 });

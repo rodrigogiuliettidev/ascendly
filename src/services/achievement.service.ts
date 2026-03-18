@@ -8,7 +8,9 @@ import type { Achievement } from "@prisma/client";
 /**
  * Returns all achievements with their unlock status for a user.
  */
-export async function getUserAchievements(userId: string): Promise<AchievementWithStatus[]> {
+export async function getUserAchievements(
+  userId: string,
+): Promise<AchievementWithStatus[]> {
   const achievements = await prisma.achievement.findMany({
     include: {
       userAchievements: {
@@ -18,7 +20,9 @@ export async function getUserAchievements(userId: string): Promise<AchievementWi
     },
   });
 
-  console.log(`[AchievementService] Found ${achievements.length} achievements for user ${userId}`);
+  console.log(
+    `[AchievementService] Found ${achievements.length} achievements for user ${userId}`,
+  );
 
   return achievements.map((a) => ({
     ...a,
@@ -32,7 +36,9 @@ export async function getUserAchievements(userId: string): Promise<AchievementWi
  * Checks all achievement conditions and unlocks any newly earned ones.
  * Returns the list of achievements just unlocked.
  */
-export async function checkAndUnlockAchievements(userId: string): Promise<Achievement[]> {
+export async function checkAndUnlockAchievements(
+  userId: string,
+): Promise<Achievement[]> {
   const user = await prisma.user.findUniqueOrThrow({
     where: { id: userId },
     select: { xp: true, streak: true },
@@ -52,7 +58,7 @@ export async function checkAndUnlockAchievements(userId: string): Promise<Achiev
 
   console.log(
     `[AchievementService] Checking ${locked.length} locked achievements. ` +
-    `User stats: xp=${user.xp}, streak=${user.streak}, completions=${totalCompletions}`
+      `User stats: xp=${user.xp}, streak=${user.streak}, completions=${totalCompletions}`,
   );
 
   const newlyUnlocked: Achievement[] = [];
@@ -76,7 +82,9 @@ export async function checkAndUnlockAchievements(userId: string): Promise<Achiev
       notifyAchievementUnlocked(userId, achievement.title).catch(console.error);
 
       newlyUnlocked.push(achievement);
-      console.log(`[AchievementService] ✅ Unlocked "${achievement.title}" for user ${userId}`);
+      console.log(
+        `[AchievementService] ✅ Unlocked "${achievement.title}" for user ${userId}`,
+      );
     }
   }
 
@@ -85,7 +93,12 @@ export async function checkAndUnlockAchievements(userId: string): Promise<Achiev
 
 async function evaluateCondition(
   achievement: Achievement,
-  ctx: { totalCompletions: number; streak: number; level: number; userId: string }
+  ctx: {
+    totalCompletions: number;
+    streak: number;
+    level: number;
+    userId: string;
+  },
 ): Promise<boolean> {
   switch (achievement.type) {
     case "FIRST_HABIT":

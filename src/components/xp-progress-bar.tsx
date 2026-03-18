@@ -16,9 +16,10 @@ export function XPProgressBar({
   xpForNextLevel,
 }: XPProgressBarProps) {
   const range = xpForNextLevel - xpForCurrentLevel;
-  const progress = range > 0
-    ? Math.round(((currentXP - xpForCurrentLevel) / range) * 100)
-    : 100;
+  const progress =
+    range > 0
+      ? Math.round(((currentXP - xpForCurrentLevel) / range) * 100)
+      : 100;
 
   return (
     <div className="space-y-2">

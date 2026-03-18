@@ -18,7 +18,7 @@ export async function GET(request: Request) {
     console.error("GET /api/notifications error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -38,7 +38,7 @@ export async function PATCH(request: Request) {
     console.error("PATCH /api/notifications error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

@@ -29,7 +29,7 @@ export async function GET(request: Request) {
           level: user ? calculateLevel(user.xp) : 0,
           isCurrentUser: entry.userId === auth.userId,
         };
-      })
+      }),
     );
 
     return NextResponse.json({
@@ -40,7 +40,7 @@ export async function GET(request: Request) {
     console.error("GET /api/ranking error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

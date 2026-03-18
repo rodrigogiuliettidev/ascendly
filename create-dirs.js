@@ -33,8 +33,12 @@ const dirs = [
   "src/app/api/users/notification-preferences",
   "src/app/api/cron/reminders",
   "src/app/api/cron/streak-warnings",
+  "src/app/api/cron/penalties",
   "src/app/api/heatmap",
   "src/app/api/dashboard",
+  "src/app/api/habits/weekly",
+  "src/app/api/xp",
+  "src/app/api/challenge",
   "src/components/ui",
   "src/lib",
   "src/services",
@@ -524,6 +528,179 @@ export async function POST(request: Request) {
 `,
   },
   {
+    path: "src/app/api/habits/weekly/route.ts",
+    content: `import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { getCurrentUser } from "@/lib/api-auth";
+
+export async function GET(request: Request) {
+  try {
+    const user = await getCurrentUser(request);
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const url = new URL(request.url);
+    const weeksParam = url.searchParams.get("weeks");
+    const weeks = weeksParam ? parseInt(weeksParam, 10) : 4;
+
+    const today = new Date();
+    const startDate = new Date(today);
+    startDate.setDate(startDate.getDate() - weeks * 7);
+    startDate.setHours(0, 0, 0, 0);
+
+    const habits = await prisma.habit.findMany({
+      where: { userId: user.id },
+      include: {
+        completions: {
+          where: {
+            completionDate: { gte: startDate },
+          },
+          orderBy: { completionDate: "asc" },
+        },
+      },
+    });
+
+    const gridData = habits.map((habit) => {
+      const completionDates = new Set(
+        habit.completions.map((c) => c.completionDate.toISOString().split("T")[0])
+      );
+      return {
+        id: habit.id,
+        title: habit.title,
+        daysOfWeek: habit.daysOfWeek || [0, 1, 2, 3, 4, 5, 6],
+        completions: Array.from(completionDates),
+      };
+    });
+
+    return NextResponse.json({ habits: gridData });
+  } catch (error) {
+    console.error("[API] Error fetching weekly habits:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+`,
+  },
+  {
+    path: "src/app/api/xp/route.ts",
+    content: `import { NextResponse } from "next/server";
+import { authenticateRequest } from "@/lib/api-auth";
+import { getTodayXpSummary } from "@/services/xp.service";
+
+export async function GET(request: Request) {
+  try {
+    const auth = authenticateRequest(request);
+    if (auth instanceof NextResponse) return auth;
+
+    const summary = await getTodayXpSummary(auth.userId);
+    return NextResponse.json(summary);
+  } catch (error) {
+    console.error("GET /api/xp error:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+`,
+  },
+  {
+    path: "src/app/api/challenge/route.ts",
+    content: `import { NextResponse } from "next/server";
+import { authenticateRequest } from "@/lib/api-auth";
+import { getChallengeProgress, resetChallenge } from "@/services/challenge.service";
+
+export async function GET(request: Request) {
+  try {
+    const auth = authenticateRequest(request);
+    if (auth instanceof NextResponse) return auth;
+
+    const progress = await getChallengeProgress(auth.userId);
+    return NextResponse.json(progress);
+  } catch (error) {
+    console.error("GET /api/challenge error:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+
+export async function POST(request: Request) {
+  try {
+    const auth = authenticateRequest(request);
+    if (auth instanceof NextResponse) return auth;
+
+    const body = await request.json();
+    if (body.action === "reset") {
+      const challenge = await resetChallenge(auth.userId);
+      return NextResponse.json(challenge);
+    }
+
+    return NextResponse.json({ error: "Invalid action" }, { status: 400 });
+  } catch (error) {
+    console.error("POST /api/challenge error:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+`,
+  },
+  {
+    path: "src/app/api/cron/penalties/route.ts",
+    content: `import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { penalizeXP } from "@/services/xp.service";
+
+export async function POST(request: Request) {
+  try {
+    const authHeader = request.headers.get("authorization");
+    const cronSecret = process.env.CRON_SECRET;
+    if (cronSecret && authHeader !== "Bearer " + cronSecret) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    yesterday.setHours(0, 0, 0, 0);
+
+    const users = await prisma.user.findMany({
+      where: {
+        habits: { some: { isActive: true } },
+      },
+      include: {
+        habits: {
+          where: { isActive: true },
+          include: {
+            completions: {
+              where: { completionDate: yesterday },
+            },
+          },
+        },
+      },
+    });
+
+    let totalPenalties = 0;
+
+    for (const user of users) {
+      const dayOfWeek = yesterday.getDay();
+      
+      for (const habit of user.habits) {
+        const scheduledDays = habit.daysOfWeek || [0, 1, 2, 3, 4, 5, 6];
+        const wasScheduled = scheduledDays.includes(dayOfWeek);
+        const wasCompleted = habit.completions.length > 0;
+
+        if (wasScheduled && !wasCompleted) {
+          const penalty = habit.penaltyXp || 5;
+          await penalizeXP(user.id, penalty, "Missed habit: " + habit.title);
+          totalPenalties++;
+          console.log("[CronPenalties] -" + penalty + " XP for user " + user.id + " (missed: " + habit.title + ")");
+        }
+      }
+    }
+
+    return NextResponse.json({ processed: users.length, penalties: totalPenalties });
+  } catch (error) {
+    console.error("POST /api/cron/penalties error:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+`,
+  },
+  {
     path: "src/app/offline/page.tsx",
     content: `"use client";
 
@@ -564,8 +741,12 @@ console.log("\nAll directories and files created successfully!");
 
 // Note about icons
 console.log("\n📌 NOTES:");
-console.log("- Place PWA icons in public/icons/ (icon-72x72.png through icon-512x512.png)");
+console.log(
+  "- Place PWA icons in public/icons/ (icon-72x72.png through icon-512x512.png)",
+);
 console.log("- Generate VAPID keys: npx web-push generate-vapid-keys");
-console.log("- Add keys to .env: NEXT_PUBLIC_VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY");
+console.log(
+  "- Add keys to .env: NEXT_PUBLIC_VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY",
+);
 console.log("- Run: npx prisma db push && npx tsx prisma/seed.ts");
 console.log("- Run: npm install && npm run dev");

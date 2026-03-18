@@ -52,11 +52,16 @@ export function NotificationPrompt() {
         applicationServerKey: urlBase64ToArrayBuffer(VAPID_PUBLIC_KEY),
       });
 
-      await post("/api/users/register-token", { subscription: subscription.toJSON() });
+      await post("/api/users/register-token", {
+        subscription: subscription.toJSON(),
+      });
       console.log("[NotificationPrompt] Push subscription registered");
       setVisible(false);
     } catch (error) {
-      console.error("[NotificationPrompt] Failed to enable notifications:", error);
+      console.error(
+        "[NotificationPrompt] Failed to enable notifications:",
+        error,
+      );
     } finally {
       setRegistering(false);
     }
@@ -72,7 +77,9 @@ export function NotificationPrompt() {
             <Bell className="h-5 w-5 text-[#FF7A00]" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-white">Enable Notifications</p>
+            <p className="text-sm font-semibold text-white">
+              Enable Notifications
+            </p>
             <p className="text-xs text-[#A1A1A1] mt-0.5">
               Receive habit reminders, achievements, and ranking updates.
             </p>

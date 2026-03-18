@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
-import { getWeekStart } from "@/lib/date";
+import { getWeekStart, startOfDay, endOfDay } from "@/lib/date";
+import type { XpSummary } from "@/types";
 
 // level = floor(sqrt(xp / 100))
 export function calculateLevel(xp: number): number {
@@ -23,10 +24,14 @@ export function levelProgress(xp: number): number {
 }
 
 /**
- * Awards XP to a user, recalculates their level (computed, not stored),
+ * Awards XP to a user, logs it, recalculates their level,
  * and records the XP in the weekly ranking table.
  */
-export async function awardXP(userId: string, amount: number): Promise<{ xp: number; level: number; leveledUp: boolean }> {
+export async function awardXP(
+  userId: string,
+  amount: number,
+  reason: string = "Completed habit",
+): Promise<{ xp: number; level: number; leveledUp: boolean }> {
   const user = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
 
   const oldLevel = calculateLevel(user.xp);
@@ -34,9 +39,20 @@ export async function awardXP(userId: string, amount: number): Promise<{ xp: num
   const newLevel = calculateLevel(newXp);
   const leveledUp = newLevel > oldLevel;
 
+  // Update user XP
   await prisma.user.update({
     where: { id: userId },
     data: { xp: newXp },
+  });
+
+  // Log XP gain
+  await prisma.xpLog.create({
+    data: {
+      userId,
+      amount,
+      type: "GAIN",
+      reason,
+    },
   });
 
   // Track weekly XP for ranking
@@ -51,9 +67,80 @@ export async function awardXP(userId: string, amount: number): Promise<{ xp: num
 }
 
 /**
+ * Applies XP penalty to a user and logs it.
+ */
+export async function penalizeXP(
+  userId: string,
+  amount: number,
+  reason: string,
+): Promise<{ xp: number; level: number }> {
+  const user = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
+
+  const newXp = Math.max(0, user.xp - amount);
+  const newLevel = calculateLevel(newXp);
+
+  // Update user XP
+  await prisma.user.update({
+    where: { id: userId },
+    data: { xp: newXp },
+  });
+
+  // Log XP penalty (negative amount)
+  await prisma.xpLog.create({
+    data: {
+      userId,
+      amount: -amount,
+      type: "PENALTY",
+      reason,
+    },
+  });
+
+  console.log(`[XPService] ⚠️ Penalty: -${amount} XP for user ${userId}: ${reason}`);
+
+  return { xp: newXp, level: newLevel };
+}
+
+/**
+ * Gets XP summary for today.
+ */
+export async function getTodayXpSummary(userId: string): Promise<XpSummary> {
+  const todayStart = startOfDay();
+  const todayEnd = endOfDay();
+
+  const logs = await prisma.xpLog.findMany({
+    where: {
+      userId,
+      createdAt: { gte: todayStart, lte: todayEnd },
+    },
+  });
+
+  const user = await prisma.user.findUniqueOrThrow({
+    where: { id: userId },
+    select: { xp: true },
+  });
+
+  const gained = logs
+    .filter((l) => l.type === "GAIN")
+    .reduce((sum, l) => sum + l.amount, 0);
+  const lost = logs
+    .filter((l) => l.type === "PENALTY")
+    .reduce((sum, l) => sum + Math.abs(l.amount), 0);
+
+  return {
+    gained,
+    lost,
+    net: gained - lost,
+    total: user.xp,
+  };
+}
+
+/**
  * Awards coins to a user.
  */
-export async function awardCoins(userId: string, amount: number): Promise<number> {
+export async function awardCoins(
+  userId: string,
+  amount: number,
+): Promise<number> {
   const updated = await prisma.user.update({
     where: { id: userId },
     data: { coins: { increment: amount } },

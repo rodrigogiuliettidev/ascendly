@@ -27,7 +27,7 @@ export async function getWeeklyRanking(limit = 10): Promise<RankingEntry[]> {
  * Returns a single user's position and XP in the current week.
  */
 export async function getUserRankingPosition(
-  userId: string
+  userId: string,
 ): Promise<{ position: number; xpEarned: number } | null> {
   const weekStart = getWeekStart();
 
@@ -53,7 +53,7 @@ export async function getUserRankingPosition(
  */
 export async function getFriendsRanking(
   userId: string,
-  limit = 10
+  limit = 10,
 ): Promise<RankingEntry[]> {
   const weekStart = getWeekStart();
 

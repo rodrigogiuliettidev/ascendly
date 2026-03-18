@@ -11,18 +11,81 @@ import { cn } from "@/lib/utils";
 // ─── Mock Data ───────────────────────────────────────────────────────────────
 
 const MOCK_USERS = [
-  { id: "u1", name: "Sarah K.", initials: "SK", level: 8, xp: 2850, isFollowing: true },
-  { id: "u2", name: "Alex M.", initials: "AM", level: 7, xp: 2340, isFollowing: false },
-  { id: "u3", name: "Jordan L.", initials: "JL", level: 6, xp: 1980, isFollowing: true },
-  { id: "u4", name: "Taylor R.", initials: "TR", level: 3, xp: 1100, isFollowing: false },
-  { id: "u5", name: "Morgan P.", initials: "MP", level: 3, xp: 980, isFollowing: false },
-  { id: "u6", name: "Casey W.", initials: "CW", level: 2, xp: 870, isFollowing: true },
+  {
+    id: "u1",
+    name: "Sarah K.",
+    initials: "SK",
+    level: 8,
+    xp: 2850,
+    isFollowing: true,
+  },
+  {
+    id: "u2",
+    name: "Alex M.",
+    initials: "AM",
+    level: 7,
+    xp: 2340,
+    isFollowing: false,
+  },
+  {
+    id: "u3",
+    name: "Jordan L.",
+    initials: "JL",
+    level: 6,
+    xp: 1980,
+    isFollowing: true,
+  },
+  {
+    id: "u4",
+    name: "Taylor R.",
+    initials: "TR",
+    level: 3,
+    xp: 1100,
+    isFollowing: false,
+  },
+  {
+    id: "u5",
+    name: "Morgan P.",
+    initials: "MP",
+    level: 3,
+    xp: 980,
+    isFollowing: false,
+  },
+  {
+    id: "u6",
+    name: "Casey W.",
+    initials: "CW",
+    level: 2,
+    xp: 870,
+    isFollowing: true,
+  },
 ];
 
 const MOCK_FOLLOWERS = [
-  { id: "u1", name: "Sarah K.", initials: "SK", level: 8, xp: 2850, isFollowing: true },
-  { id: "u3", name: "Jordan L.", initials: "JL", level: 6, xp: 1980, isFollowing: true },
-  { id: "u7", name: "Jamie T.", initials: "JT", level: 4, xp: 1400, isFollowing: false },
+  {
+    id: "u1",
+    name: "Sarah K.",
+    initials: "SK",
+    level: 8,
+    xp: 2850,
+    isFollowing: true,
+  },
+  {
+    id: "u3",
+    name: "Jordan L.",
+    initials: "JL",
+    level: 6,
+    xp: 1980,
+    isFollowing: true,
+  },
+  {
+    id: "u7",
+    name: "Jamie T.",
+    initials: "JT",
+    level: 4,
+    xp: 1400,
+    isFollowing: false,
+  },
 ];
 
 type UserData = (typeof MOCK_USERS)[number];
@@ -34,16 +97,20 @@ export default function SocialPage() {
 
   const toggleFollow = (id: string) => {
     setUsers((prev) =>
-      prev.map((u) => (u.id === id ? { ...u, isFollowing: !u.isFollowing } : u))
+      prev.map((u) =>
+        u.id === id ? { ...u, isFollowing: !u.isFollowing } : u,
+      ),
     );
     setFollowers((prev) =>
-      prev.map((u) => (u.id === id ? { ...u, isFollowing: !u.isFollowing } : u))
+      prev.map((u) =>
+        u.id === id ? { ...u, isFollowing: !u.isFollowing } : u,
+      ),
     );
   };
 
   const following = users.filter((u) => u.isFollowing);
   const filteredUsers = users.filter((u) =>
-    u.name.toLowerCase().includes(search.toLowerCase())
+    u.name.toLowerCase().includes(search.toLowerCase()),
   );
 
   return (
@@ -54,7 +121,9 @@ export default function SocialPage() {
           <Users className="h-5 w-5 text-[#FF7A00]" />
           Social
         </h1>
-        <p className="text-sm text-[#A1A1A1]">Connect with other users and compete together</p>
+        <p className="text-sm text-[#A1A1A1]">
+          Connect with other users and compete together
+        </p>
       </div>
 
       {/* Search */}
@@ -72,8 +141,12 @@ export default function SocialPage() {
       <Tabs defaultValue="discover">
         <TabsList className="w-full grid grid-cols-3">
           <TabsTrigger value="discover">Discover</TabsTrigger>
-          <TabsTrigger value="following">Following ({following.length})</TabsTrigger>
-          <TabsTrigger value="followers">Followers ({followers.length})</TabsTrigger>
+          <TabsTrigger value="following">
+            Following ({following.length})
+          </TabsTrigger>
+          <TabsTrigger value="followers">
+            Followers ({followers.length})
+          </TabsTrigger>
         </TabsList>
 
         {/* Discover */}
@@ -135,7 +208,11 @@ export default function SocialPage() {
   );
 }
 
-function UserCard({ user, onToggleFollow, delay = 0 }: {
+function UserCard({
+  user,
+  onToggleFollow,
+  delay = 0,
+}: {
   user: UserData;
   onToggleFollow: () => void;
   delay?: number;
@@ -145,7 +222,12 @@ function UserCard({ user, onToggleFollow, delay = 0 }: {
       className="flex items-center gap-4 rounded-2xl border border-white/[0.06] bg-[#121212] p-4 transition-all hover:border-white/10 animate-slide-up"
       style={{ animationDelay: `${delay}ms` }}
     >
-      <Avatar className={cn("h-12 w-12", user.isFollowing && "ring-2 ring-[#FF7A00]/30")}>
+      <Avatar
+        className={cn(
+          "h-12 w-12",
+          user.isFollowing && "ring-2 ring-[#FF7A00]/30",
+        )}
+      >
         <AvatarFallback>{user.initials}</AvatarFallback>
       </Avatar>
 
@@ -166,7 +248,8 @@ function UserCard({ user, onToggleFollow, delay = 0 }: {
         onClick={onToggleFollow}
         className={cn(
           "gap-1.5 shrink-0",
-          user.isFollowing && "text-[#A1A1A1] hover:text-red-400 hover:border-red-400/30"
+          user.isFollowing &&
+            "text-[#A1A1A1] hover:text-red-400 hover:border-red-400/30",
         )}
       >
         {user.isFollowing ? (

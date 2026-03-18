@@ -13,7 +13,7 @@ export async function GET(request: Request) {
     console.error("GET /api/habits error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -27,10 +27,7 @@ export async function POST(request: Request) {
     const { title, description, xpReward, coinReward, reminderTime } = body;
 
     if (!title?.trim()) {
-      return NextResponse.json(
-        { error: "Title is required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Title is required" }, { status: 400 });
     }
 
     const habit = await createHabit(auth.userId, {
@@ -46,7 +43,7 @@ export async function POST(request: Request) {
     console.error("POST /api/habits error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

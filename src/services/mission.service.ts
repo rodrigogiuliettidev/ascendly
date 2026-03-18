@@ -8,7 +8,9 @@ import type { MissionWithDetails } from "@/types";
  * Returns today's missions for a user.
  * Missions are assigned daily; if none exist for today, they are generated.
  */
-export async function getTodayMissions(userId: string): Promise<MissionWithDetails[]> {
+export async function getTodayMissions(
+  userId: string,
+): Promise<MissionWithDetails[]> {
   const todayStart = startOfDay();
   const todayEnd = endOfDay();
 
@@ -32,11 +34,16 @@ export async function getTodayMissions(userId: string): Promise<MissionWithDetai
 /**
  * Assigns all available missions to the user for today.
  */
-async function assignDailyMissions(userId: string, todayStart: Date): Promise<MissionWithDetails[]> {
+async function assignDailyMissions(
+  userId: string,
+  todayStart: Date,
+): Promise<MissionWithDetails[]> {
   const missions = await prisma.mission.findMany();
 
   if (missions.length === 0) {
-    console.warn("[MissionService] No missions found in database. Run prisma db seed.");
+    console.warn(
+      "[MissionService] No missions found in database. Run prisma db seed.",
+    );
     return [];
   }
 
@@ -54,10 +61,14 @@ async function assignDailyMissions(userId: string, todayStart: Date): Promise<Mi
         include: { mission: true },
       });
       created.push(um);
-      console.log(`[MissionService] Assigned mission "${mission.title}" to user ${userId}`);
+      console.log(
+        `[MissionService] Assigned mission "${mission.title}" to user ${userId}`,
+      );
     } catch (error) {
       // Unique constraint violation — already assigned
-      console.log(`[MissionService] Mission "${mission.title}" already assigned for today`);
+      console.log(
+        `[MissionService] Mission "${mission.title}" already assigned for today`,
+      );
     }
   }
 
@@ -82,7 +93,7 @@ async function assignDailyMissions(userId: string, todayStart: Date): Promise<Mi
  */
 export async function updateMissionsOnHabitComplete(
   userId: string,
-  xpEarned: number
+  xpEarned: number,
 ): Promise<void> {
   const todayStart = startOfDay();
   const todayEnd = endOfDay();
@@ -131,7 +142,7 @@ export async function updateMissionsOnHabitComplete(
     }
 
     console.log(
-      `[MissionService] Updated "${um.mission.title}": ${newProgress}/${um.mission.target}${isComplete ? " ✅ COMPLETED" : ""}`
+      `[MissionService] Updated "${um.mission.title}": ${newProgress}/${um.mission.target}${isComplete ? " ✅ COMPLETED" : ""}`,
     );
   }
 }
@@ -141,7 +152,7 @@ export async function updateMissionsOnHabitComplete(
  */
 export async function claimMissionReward(
   userMissionId: string,
-  userId: string
+  userId: string,
 ): Promise<{ xp: number; coins: number }> {
   const um = await prisma.userMission.findUniqueOrThrow({
     where: { id: userMissionId, userId },

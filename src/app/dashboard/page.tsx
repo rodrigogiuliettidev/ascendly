@@ -11,6 +11,7 @@ import {
   ChevronRight,
   CheckCircle2,
   Loader2,
+  Info,
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { XPProgressBar } from "@/components/xp-progress-bar";
@@ -21,6 +22,10 @@ import { StatsCard } from "@/components/stats-card";
 import { Heatmap } from "@/components/heatmap";
 import { AchievementPreview } from "@/components/achievement-preview";
 import { XpToast } from "@/components/xp-toast";
+import { ChallengeCard } from "@/components/challenge-card";
+import { WeeklyProgressCard } from "@/components/weekly-progress";
+import { WeeklyHabitGrid } from "@/components/weekly-habit-grid";
+import { XpBalanceModal } from "@/components/xp-balance-modal";
 import { useAuth } from "@/hooks/use-auth";
 import { useApi } from "@/hooks/use-api";
 import Link from "next/link";
@@ -66,6 +71,35 @@ interface AchievementData {
   unlockedAt: string | null;
 }
 
+interface ChallengeData {
+  currentDay: number;
+  totalDays: number;
+  habitsCompletedToday: number;
+  totalHabitsToday: number;
+  daysRemaining: number;
+  isActive: boolean;
+}
+
+interface WeeklyProgressData {
+  completed: number;
+  total: number;
+  percentage: number;
+}
+
+interface XpSummaryData {
+  gained: number;
+  lost: number;
+  net: number;
+  total: number;
+}
+
+interface WeeklyHabitData {
+  id: string;
+  title: string;
+  daysOfWeek: number[];
+  completions: string[];
+}
+
 function xpForLevel(level: number) {
   return level * level * 100;
 }
@@ -94,6 +128,11 @@ export default function DashboardPage() {
     xpEarned: number;
   } | null>(null);
   const [achievements, setAchievements] = useState<AchievementData[]>([]);
+  const [challenge, setChallenge] = useState<ChallengeData | null>(null);
+  const [weeklyProgress, setWeeklyProgress] = useState<WeeklyProgressData | null>(null);
+  const [xpSummary, setXpSummary] = useState<XpSummaryData | null>(null);
+  const [weeklyHabits, setWeeklyHabits] = useState<WeeklyHabitData[]>([]);
+  const [showXpModal, setShowXpModal] = useState(false);
   const [heatmapData, setHeatmapData] = useState<
     { date: string; count: number }[]
   >([]);
@@ -117,6 +156,9 @@ export default function DashboardPage() {
           rankingRes,
           achievementsRes,
           heatmapRes,
+          challengeRes,
+          xpRes,
+          weeklyHabitsRes,
         ] = await Promise.allSettled([
           get<HabitData[]>("/api/habits"),
           get<MissionData[]>("/api/missions"),
@@ -126,9 +168,19 @@ export default function DashboardPage() {
           }>("/api/ranking"),
           get<AchievementData[]>("/api/achievements"),
           get<{ date: string; count: number }[]>("/api/heatmap"),
+          get<ChallengeData>("/api/challenge"),
+          get<XpSummaryData>("/api/xp"),
+          get<{ habits: WeeklyHabitData[] }>("/api/habits/weekly"),
         ]);
 
-        if (habitsRes.status === "fulfilled") setHabits(habitsRes.value);
+        if (habitsRes.status === "fulfilled") {
+          setHabits(habitsRes.value);
+          // Calculate weekly progress from habits
+          const completed = habitsRes.value.filter((h) => h.completedToday).length;
+          const total = habitsRes.value.length;
+          const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
+          setWeeklyProgress({ completed, total, percentage });
+        }
         if (missionsRes.status === "fulfilled") setMissions(missionsRes.value);
         if (rankingRes.status === "fulfilled") {
           setRanking(rankingRes.value.ranking.slice(0, 5));
@@ -139,6 +191,15 @@ export default function DashboardPage() {
         }
         if (heatmapRes.status === "fulfilled") {
           setHeatmapData(heatmapRes.value);
+        }
+        if (challengeRes.status === "fulfilled") {
+          setChallenge(challengeRes.value);
+        }
+        if (xpRes.status === "fulfilled") {
+          setXpSummary(xpRes.value);
+        }
+        if (weeklyHabitsRes.status === "fulfilled") {
+          setWeeklyHabits(weeklyHabitsRes.value.habits);
         }
       } catch (err) {
         console.error("Dashboard fetch error:", err);
@@ -252,12 +313,44 @@ export default function DashboardPage() {
           </div>
           <StreakDisplay streak={user.streak} size="sm" />
         </div>
-        <XPProgressBar
-          currentXP={user.xp}
-          level={user.level}
-          xpForCurrentLevel={xpForLevel(user.level)}
-          xpForNextLevel={xpForLevel(user.level + 1)}
-        />
+        <div className="flex items-center gap-2">
+          <div className="flex-1">
+            <XPProgressBar
+              currentXP={user.xp}
+              level={user.level}
+              xpForCurrentLevel={xpForLevel(user.level)}
+              xpForNextLevel={xpForLevel(user.level + 1)}
+            />
+          </div>
+          <button
+            onClick={() => setShowXpModal(true)}
+            className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
+            title="View XP details"
+          >
+            <Info className="h-4 w-4 text-[#A1A1A1]" />
+          </button>
+        </div>
+      </div>
+
+      {/* ── Challenge + Weekly Progress ── */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        {challenge && (
+          <ChallengeCard
+            currentDay={challenge.currentDay}
+            totalDays={challenge.totalDays}
+            habitsCompletedToday={challenge.habitsCompletedToday}
+            totalHabitsToday={challenge.totalHabitsToday}
+            daysRemaining={challenge.daysRemaining}
+            isActive={challenge.isActive}
+          />
+        )}
+        {weeklyProgress && (
+          <WeeklyProgressCard
+            completed={weeklyProgress.completed}
+            total={weeklyProgress.total}
+            percentage={weeklyProgress.percentage}
+          />
+        )}
       </div>
 
       {/* ── Stats Grid ── */}
@@ -347,6 +440,11 @@ export default function DashboardPage() {
             </h3>
             <Heatmap data={heatmapData} weeks={16} />
           </div>
+
+          {/* Weekly Habit Grid */}
+          {weeklyHabits.length > 0 && (
+            <WeeklyHabitGrid habits={weeklyHabits} />
+          )}
         </div>
 
         {/* Right column — Missions + Achievements + Ranking */}
@@ -476,6 +574,18 @@ export default function DashboardPage() {
         show={xpToast.show}
         onComplete={handleXpToastComplete}
       />
+
+      {/* XP Balance Modal */}
+      {xpSummary && (
+        <XpBalanceModal
+          open={showXpModal}
+          onOpenChange={setShowXpModal}
+          gained={xpSummary.gained}
+          lost={xpSummary.lost}
+          net={xpSummary.net}
+          total={xpSummary.total}
+        />
+      )}
     </div>
   );
 }

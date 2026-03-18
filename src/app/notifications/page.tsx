@@ -2,7 +2,16 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Bell, Flame, Trophy, Target, Sparkles, CheckCircle2, Clock, Loader2 } from "lucide-react";
+import {
+  Bell,
+  Flame,
+  Trophy,
+  Target,
+  Sparkles,
+  CheckCircle2,
+  Clock,
+  Loader2,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
@@ -93,11 +102,18 @@ export default function NotificationsPage() {
             Notifications
           </h1>
           <p className="text-sm text-[#A1A1A1]">
-            {unreadCount > 0 ? `${unreadCount} unread notifications` : "All caught up!"}
+            {unreadCount > 0
+              ? `${unreadCount} unread notifications`
+              : "All caught up!"}
           </p>
         </div>
         {unreadCount > 0 && (
-          <Button variant="ghost" size="sm" onClick={markAllRead} className="text-[#FF7A00] hover:text-[#FF9F3F]">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={markAllRead}
+            className="text-[#FF7A00] hover:text-[#FF9F3F]"
+          >
             <CheckCircle2 className="h-4 w-4 mr-1.5" />
             Mark all read
           </Button>
@@ -112,7 +128,10 @@ export default function NotificationsPage() {
           </div>
         )}
         {notifications.map((notification, i) => {
-          const config = typeConfig[notification.type] || { icon: Bell, color: "#A1A1A1" };
+          const config = typeConfig[notification.type] || {
+            icon: Bell,
+            color: "#A1A1A1",
+          };
           const Icon = config.icon;
           const handleClick = () => {
             if (notification.link) {
@@ -130,7 +149,7 @@ export default function NotificationsPage() {
                 notification.read
                   ? "border-white/[0.04] bg-[#121212]/60"
                   : "border-white/[0.06] bg-[#121212]",
-                notification.link && "cursor-pointer hover:border-white/10"
+                notification.link && "cursor-pointer hover:border-white/10",
               )}
               style={{ animationDelay: `${i * 30}ms` }}
             >
@@ -138,7 +157,7 @@ export default function NotificationsPage() {
               <div
                 className={cn(
                   "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl",
-                  notification.read ? "opacity-50" : ""
+                  notification.read ? "opacity-50" : "",
                 )}
                 style={{ backgroundColor: `${config.color}15` }}
               >
@@ -147,13 +166,19 @@ export default function NotificationsPage() {
 
               {/* Content */}
               <div className="flex-1 min-w-0">
-                <p className={cn(
-                  "text-sm leading-relaxed",
-                  notification.read ? "text-[#A1A1A1]" : "text-white font-medium"
-                )}>
+                <p
+                  className={cn(
+                    "text-sm leading-relaxed",
+                    notification.read
+                      ? "text-[#A1A1A1]"
+                      : "text-white font-medium",
+                  )}
+                >
                   {notification.message}
                 </p>
-                <p className="text-[11px] text-[#A1A1A1] mt-1">{timeAgo(notification.createdAt)}</p>
+                <p className="text-[11px] text-[#A1A1A1] mt-1">
+                  {timeAgo(notification.createdAt)}
+                </p>
               </div>
 
               {/* Unread dot */}

@@ -33,7 +33,7 @@ export async function sendNotification(
   type: NotificationType,
   message: string,
   link?: string,
-  pushPayload?: PushPayload
+  pushPayload?: PushPayload,
 ): Promise<void> {
   // Check user preferences
   const prefs = await prisma.notificationPreference.findUnique({
@@ -41,7 +41,9 @@ export async function sendNotification(
   });
 
   if (prefs && !isTypeEnabled(prefs, type)) {
-    console.log(`[PushService] Notification type ${type} disabled for user ${userId}`);
+    console.log(
+      `[PushService] Notification type ${type} disabled for user ${userId}`,
+    );
     return;
   }
 
@@ -50,7 +52,9 @@ export async function sendNotification(
     data: { userId, type, message, link },
   });
 
-  console.log(`[PushService] 📩 Stored notification: ${type} for user ${userId}`);
+  console.log(
+    `[PushService] 📩 Stored notification: ${type} for user ${userId}`,
+  );
 
   // Send push notification if user has a subscription
   if (pushPayload && VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
@@ -61,7 +65,10 @@ export async function sendNotification(
 /**
  * Sends a Web Push to the user's registered endpoint.
  */
-async function sendPushToUser(userId: string, payload: PushPayload): Promise<void> {
+async function sendPushToUser(
+  userId: string,
+  payload: PushPayload,
+): Promise<void> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: { fcmToken: true },
@@ -71,10 +78,7 @@ async function sendPushToUser(userId: string, payload: PushPayload): Promise<voi
 
   try {
     const subscription = JSON.parse(user.fcmToken);
-    await webPush.sendNotification(
-      subscription,
-      JSON.stringify(payload)
-    );
+    await webPush.sendNotification(subscription, JSON.stringify(payload));
     console.log(`[PushService] 🔔 Push sent to user ${userId}`);
   } catch (error: unknown) {
     const statusCode = (error as { statusCode?: number })?.statusCode;
@@ -84,7 +88,9 @@ async function sendPushToUser(userId: string, payload: PushPayload): Promise<voi
         where: { id: userId },
         data: { fcmToken: null },
       });
-      console.log(`[PushService] Removed expired subscription for user ${userId}`);
+      console.log(
+        `[PushService] Removed expired subscription for user ${userId}`,
+      );
     } else {
       console.error(`[PushService] Push failed for user ${userId}:`, error);
     }
@@ -102,7 +108,7 @@ function isTypeEnabled(
     streakWarnings: boolean;
     missions: boolean;
   },
-  type: NotificationType
+  type: NotificationType,
 ): boolean {
   switch (type) {
     case "HABIT_REMINDER":
@@ -124,7 +130,11 @@ function isTypeEnabled(
 
 // ─── Gamification Notification Helpers ────────────────────────────────────────
 
-export async function notifyHabitCompleted(userId: string, habitTitle: string, xp: number) {
+export async function notifyHabitCompleted(
+  userId: string,
+  habitTitle: string,
+  xp: number,
+) {
   await sendNotification(
     userId,
     "XP_REWARD",
@@ -135,11 +145,14 @@ export async function notifyHabitCompleted(userId: string, habitTitle: string, x
       body: `You completed "${habitTitle}" and earned ${xp} XP.`,
       url: "/habits",
       tag: "xp-reward",
-    }
+    },
   );
 }
 
-export async function notifyAchievementUnlocked(userId: string, achievementTitle: string) {
+export async function notifyAchievementUnlocked(
+  userId: string,
+  achievementTitle: string,
+) {
   await sendNotification(
     userId,
     "ACHIEVEMENT_UNLOCK",
@@ -150,29 +163,25 @@ export async function notifyAchievementUnlocked(userId: string, achievementTitle
       body: `You unlocked the "${achievementTitle}" achievement.`,
       url: "/profile",
       tag: "achievement",
-    }
+    },
   );
 }
 
 export async function notifyRankingUpdate(userId: string, position: number) {
-  const message = position <= 10
-    ? `You entered the Top 10! You're now ranked #${position} this week. 🔥`
-    : `Ranking update: You moved to position #${position} this week.`;
+  const message =
+    position <= 10
+      ? `You entered the Top 10! You're now ranked #${position} this week. 🔥`
+      : `Ranking update: You moved to position #${position} this week.`;
 
-  await sendNotification(
-    userId,
-    "RANKING_UPDATE",
-    message,
-    "/ranking",
-    {
-      title: position <= 10 ? "You entered the Top 10!" : "Ranking update",
-      body: position <= 10
+  await sendNotification(userId, "RANKING_UPDATE", message, "/ranking", {
+    title: position <= 10 ? "You entered the Top 10!" : "Ranking update",
+    body:
+      position <= 10
         ? `You are now ranked #${position} this week.`
         : `You moved to position #${position} this week.`,
-      url: "/ranking",
-      tag: "ranking",
-    }
-  );
+    url: "/ranking",
+    tag: "ranking",
+  });
 }
 
 export async function notifyStreakWarning(userId: string, streak: number) {
@@ -186,7 +195,7 @@ export async function notifyStreakWarning(userId: string, streak: number) {
       body: `Complete a habit today to keep your ${streak}-day streak alive.`,
       url: "/habits",
       tag: "streak-warning",
-    }
+    },
   );
 }
 
@@ -201,11 +210,14 @@ export async function notifyHabitReminder(userId: string, habitTitle: string) {
       body: `Don't forget: ${habitTitle}.`,
       url: "/habits",
       tag: `reminder-${habitTitle}`,
-    }
+    },
   );
 }
 
-export async function notifyMissionCompleted(userId: string, missionTitle: string) {
+export async function notifyMissionCompleted(
+  userId: string,
+  missionTitle: string,
+) {
   await sendNotification(
     userId,
     "MISSION_COMPLETE",
@@ -216,6 +228,6 @@ export async function notifyMissionCompleted(userId: string, missionTitle: strin
       body: `You completed today's mission and earned rewards.`,
       url: "/dashboard",
       tag: "mission-complete",
-    }
+    },
   );
 }

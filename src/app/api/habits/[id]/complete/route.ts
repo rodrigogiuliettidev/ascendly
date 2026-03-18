@@ -4,7 +4,7 @@ import { completeHabit } from "@/services/habit.service";
 
 export async function POST(
   request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const auth = authenticateRequest(request);

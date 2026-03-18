@@ -62,31 +62,74 @@ export function MobileNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-white/[0.06] bg-[#0B0B0B]/90 backdrop-blur-xl lg:hidden safe-area-inset-bottom">
-      <div className="mx-auto flex max-w-md items-center justify-around py-1.5">
-        {bottomNavItems.map((item) => {
-          const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                "flex flex-col items-center gap-0.5 rounded-xl px-3 py-1.5 text-[10px] font-medium transition-all",
-                isActive
-                  ? "text-[#FF7A00]"
-                  : "text-[#A1A1A1]"
-              )}
-            >
-              <div className={cn(
-                "flex h-8 w-8 items-center justify-center rounded-xl transition-all",
-                isActive && "bg-[#FF7A00]/10"
-              )}>
-                <item.icon className={cn("h-5 w-5", isActive && "drop-shadow-[0_0_6px_rgba(255,122,0,0.5)]")} />
-              </div>
-              {item.label}
-            </Link>
-          );
-        })}
+    <nav className="fixed bottom-4 left-4 right-4 z-50 lg:hidden">
+      <div className="mx-auto max-w-md">
+        {/* Outer glow effect */}
+        <div className="absolute inset-0 rounded-3xl bg-gradient-to-r from-[#FF7A00]/20 via-transparent to-[#FF7A00]/20 blur-xl opacity-50" />
+        
+        {/* Main container */}
+        <div className="relative rounded-3xl border border-white/[0.08] bg-[#0D0D0D]/95 backdrop-blur-2xl shadow-2xl shadow-black/50">
+          {/* Top highlight */}
+          <div className="absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+          
+          <div className="flex items-center justify-around px-2 py-3">
+            {bottomNavItems.map((item) => {
+              const isActive =
+                pathname === item.href || pathname.startsWith(item.href + "/");
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={cn(
+                    "relative flex flex-col items-center gap-1 px-4 py-1.5 transition-all duration-300 active:scale-95",
+                    isActive ? "text-[#FF7A00]" : "text-[#555555]",
+                  )}
+                >
+                  {/* Active background glow */}
+                  {isActive && (
+                    <>
+                      <div className="absolute inset-0 rounded-2xl bg-[#FF7A00]/10" />
+                      <div className="absolute inset-0 rounded-2xl bg-[#FF7A00]/5 blur-md" />
+                    </>
+                  )}
+                  
+                  {/* Icon container */}
+                  <div
+                    className={cn(
+                      "relative flex h-10 w-10 items-center justify-center rounded-2xl transition-all duration-300",
+                      isActive 
+                        ? "bg-gradient-to-br from-[#FF7A00]/20 to-[#FF7A00]/5" 
+                        : "hover:bg-white/5",
+                    )}
+                  >
+                    <item.icon
+                      className={cn(
+                        "h-5 w-5 transition-all duration-300",
+                        isActive && "scale-110 drop-shadow-[0_0_12px_rgba(255,122,0,0.8)]",
+                      )}
+                      strokeWidth={isActive ? 2.5 : 2}
+                    />
+                    
+                    {/* Active dot indicator with glow */}
+                    {isActive && (
+                      <span className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 h-1.5 w-1.5 rounded-full bg-[#FF7A00] shadow-[0_0_8px_3px_rgba(255,122,0,0.6)]" />
+                    )}
+                  </div>
+                  
+                  {/* Label */}
+                  <span 
+                    className={cn(
+                      "relative text-[10px] font-semibold transition-all duration-300",
+                      isActive ? "opacity-100" : "opacity-70"
+                    )}
+                  >
+                    {item.label}
+                  </span>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
       </div>
     </nav>
   );
@@ -96,22 +139,34 @@ export function DesktopNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="hidden lg:flex items-center gap-1 rounded-xl bg-white/[0.03] p-1">
+    <nav className="hidden lg:flex items-center gap-1 rounded-2xl bg-white/[0.03] border border-white/[0.06] p-1.5">
       {bottomNavItems.map((item) => {
-        const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+        const isActive =
+          pathname === item.href || pathname.startsWith(item.href + "/");
         return (
           <Link
             key={item.href}
             href={item.href}
             className={cn(
-              "flex items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-all",
+              "relative flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium transition-all duration-300",
               isActive
-                ? "bg-[#FF7A00]/10 text-[#FF7A00]"
-                : "text-[#A1A1A1] hover:text-white hover:bg-white/5"
+                ? "text-[#FF7A00]"
+                : "text-[#A1A1A1] hover:text-white hover:bg-white/5",
             )}
           >
-            <item.icon className="h-4 w-4" />
-            {item.label}
+            {isActive && (
+              <>
+                <div className="absolute inset-0 rounded-xl bg-[#FF7A00]/10" />
+                <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-[#FF7A00]/5 to-transparent" />
+              </>
+            )}
+            <item.icon 
+              className={cn(
+                "relative h-4 w-4 transition-all",
+                isActive && "drop-shadow-[0_0_8px_rgba(255,122,0,0.6)]"
+              )} 
+            />
+            <span className="relative">{item.label}</span>
           </Link>
         );
       })}

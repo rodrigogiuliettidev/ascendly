@@ -13,6 +13,9 @@ import type {
   MissionStatus,
   AchievementType,
   NotificationType,
+  XpLog,
+  XpLogType,
+  Challenge,
 } from "@prisma/client";
 
 // ─── Re-exports from Prisma for convenience ─────────────────────────────────
@@ -32,6 +35,9 @@ export type {
   MissionStatus,
   AchievementType,
   NotificationType,
+  XpLog,
+  XpLogType,
+  Challenge,
 };
 
 // ─── DTOs ────────────────────────────────────────────────────────────────────
@@ -41,7 +47,9 @@ export type CreateHabitInput = {
   description?: string;
   xpReward?: number;
   coinReward?: number;
+  penaltyXp?: number;
   reminderTime?: string;
+  daysOfWeek?: number[];
 };
 
 export type UpdateHabitInput = Partial<CreateHabitInput> & {
@@ -87,6 +95,7 @@ export type DashboardData = {
 
 export type HabitWithCompletion = Habit & {
   completedToday: boolean;
+  scheduledToday: boolean;
 };
 
 export type MissionWithDetails = UserMission & {
@@ -96,4 +105,27 @@ export type MissionWithDetails = UserMission & {
 export type AchievementWithStatus = Achievement & {
   unlocked: boolean;
   unlockedAt?: Date | null;
+};
+
+export type XpSummary = {
+  gained: number;
+  lost: number;
+  net: number;
+  total: number;
+};
+
+export type WeeklyProgress = {
+  completed: number;
+  total: number;
+  percentage: number;
+};
+
+export type ChallengeProgress = {
+  currentDay: number;
+  totalDays: number;
+  startDate: Date;
+  isActive: boolean;
+  habitsCompletedToday: number;
+  totalHabitsToday: number;
+  daysRemaining: number;
 };

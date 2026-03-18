@@ -19,13 +19,13 @@ export async function GET(request: Request) {
         xpReward: um.mission.xpReward,
         coinReward: um.mission.coinReward,
         status: um.status,
-      }))
+      })),
     );
   } catch (error) {
     console.error("GET /api/missions error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

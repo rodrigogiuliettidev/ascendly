@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { startOfDay } from "@/lib/date";
+import { startOfDay, getWeekStart, endOfDay } from "@/lib/date";
 import { awardXP, awardCoins } from "./xp.service";
 import { updateStreak } from "./streak.service";
 import { updateMissionsOnHabitComplete } from "./mission.service";
@@ -9,6 +9,7 @@ import type {
   CreateHabitInput,
   UpdateHabitInput,
   HabitWithCompletion,
+  WeeklyProgress,
 } from "@/types";
 
 function parseReminderTime(reminderTime?: string): number | null | undefined {
@@ -39,7 +40,9 @@ export async function createHabit(userId: string, input: CreateHabitInput) {
       description: input.description,
       xpReward: input.xpReward ?? 25,
       coinReward: input.coinReward ?? 10,
+      penaltyXp: input.penaltyXp ?? 5,
       reminderTime: parseReminderTime(input.reminderTime),
+      daysOfWeek: input.daysOfWeek ?? [0, 1, 2, 3, 4, 5, 6],
     },
   });
 }
@@ -53,11 +56,12 @@ export async function updateHabit(
   input: UpdateHabitInput,
 ) {
   const reminderTime = parseReminderTime(input.reminderTime);
+  const { reminderTime: _, ...rest } = input;
 
   return prisma.habit.update({
     where: { id: habitId, userId },
     data: {
-      ...input,
+      ...rest,
       reminderTime,
     },
   });
@@ -74,11 +78,51 @@ export async function deleteHabit(habitId: string, userId: string) {
 }
 
 /**
- * Returns all active habits for a user, with today's completion status.
+ * Returns all active habits for a user scheduled for today, with today's completion status.
  */
 export async function getUserHabitsToday(
   userId: string,
 ): Promise<HabitWithCompletion[]> {
+  const todayStart = startOfDay();
+  const today = new Date();
+  const dayOfWeek = today.getUTCDay(); // 0 = Sunday
+
+  const habits = await prisma.habit.findMany({
+    where: { userId, isActive: true },
+    include: {
+      completions: {
+        where: { completionDate: todayStart },
+        take: 1,
+      },
+    },
+    orderBy: { createdAt: "asc" },
+  });
+
+  return habits.map((habit) => {
+    const scheduledToday = habit.daysOfWeek.includes(dayOfWeek);
+    return {
+      ...habit,
+      completedToday: habit.completions.length > 0,
+      scheduledToday,
+      completions: undefined as never,
+    };
+  });
+}
+
+/**
+ * Returns only habits scheduled for today.
+ */
+export async function getScheduledHabitsToday(
+  userId: string,
+): Promise<HabitWithCompletion[]> {
+  const habits = await getUserHabitsToday(userId);
+  return habits.filter((h) => h.scheduledToday);
+}
+
+/**
+ * Returns all active habits (regardless of day).
+ */
+export async function getAllHabits(userId: string) {
   const todayStart = startOfDay();
 
   const habits = await prisma.habit.findMany({
@@ -92,9 +136,13 @@ export async function getUserHabitsToday(
     orderBy: { createdAt: "asc" },
   });
 
+  const today = new Date();
+  const dayOfWeek = today.getUTCDay();
+
   return habits.map((habit) => ({
     ...habit,
     completedToday: habit.completions.length > 0,
+    scheduledToday: habit.daysOfWeek.includes(dayOfWeek),
     completions: undefined as never,
   }));
 }
@@ -131,21 +179,25 @@ export async function completeHabit(habitId: string, userId: string) {
     },
   });
 
-  console.log(`[HabitService] ✅ Habit "${habit.title}" completed by user ${userId}`);
+  console.log(
+    `[HabitService] ✅ Habit "${habit.title}" completed by user ${userId}`,
+  );
 
-  // Award XP & coins
-  const xpResult = await awardXP(userId, habit.xpReward);
+  // Award XP & coins with logging
+  const xpResult = await awardXP(userId, habit.xpReward, `Completed habit: ${habit.title}`);
   const coins = await awardCoins(userId, habit.coinReward);
 
   console.log(
     `[HabitService] Awarded ${habit.xpReward} XP (total: ${xpResult.xp}, level: ${xpResult.level}` +
-    `${xpResult.leveledUp ? " LEVEL UP!" : ""}) and ${habit.coinReward} coins (total: ${coins})`
+      `${xpResult.leveledUp ? " LEVEL UP!" : ""}) and ${habit.coinReward} coins (total: ${coins})`,
   );
 
   // Update streak
   const streakResult = await updateStreak(userId);
 
-  console.log(`[HabitService] Streak: ${streakResult.streak}${streakResult.reset ? " (reset)" : ""}`);
+  console.log(
+    `[HabitService] Streak: ${streakResult.streak}${streakResult.reset ? " (reset)" : ""}`,
+  );
 
   // Update daily missions
   await updateMissionsOnHabitComplete(userId, habit.xpReward);
@@ -153,8 +205,13 @@ export async function completeHabit(habitId: string, userId: string) {
   // Check achievements
   const newAchievements = await checkAndUnlockAchievements(userId);
 
+  // Check if challenge day should advance (all habits completed)
+  await checkChallengeProgress(userId);
+
   // Send habit completed notification (async, don't await)
-  notifyHabitCompleted(userId, habit.title, habit.xpReward).catch(console.error);
+  notifyHabitCompleted(userId, habit.title, habit.xpReward).catch(
+    console.error,
+  );
 
   return {
     completion,
@@ -164,6 +221,86 @@ export async function completeHabit(habitId: string, userId: string) {
     coins,
     streak: streakResult.streak,
     newAchievements,
+  };
+}
+
+/**
+ * Checks if user completed all scheduled habits for today and advances challenge.
+ */
+async function checkChallengeProgress(userId: string) {
+  const challenge = await prisma.challenge.findUnique({
+    where: { userId },
+  });
+
+  if (!challenge || !challenge.isActive) return;
+
+  const todayHabits = await getScheduledHabitsToday(userId);
+  const allCompleted = todayHabits.every((h) => h.completedToday);
+
+  if (allCompleted && todayHabits.length > 0) {
+    const newDay = challenge.currentDay + 1;
+    const isComplete = newDay > challenge.totalDays;
+
+    await prisma.challenge.update({
+      where: { userId },
+      data: {
+        currentDay: isComplete ? challenge.totalDays : newDay,
+        isActive: !isComplete,
+        endDate: isComplete ? new Date() : undefined,
+      },
+    });
+
+    console.log(`[HabitService] Challenge day ${newDay}/${challenge.totalDays} for user ${userId}`);
+  }
+}
+
+/**
+ * Returns weekly habit completion progress.
+ */
+export async function getWeeklyProgress(userId: string): Promise<WeeklyProgress> {
+  const weekStart = getWeekStart();
+  const now = new Date();
+  const dayOfWeek = now.getUTCDay();
+
+  // Get all active habits
+  const habits = await prisma.habit.findMany({
+    where: { userId, isActive: true },
+  });
+
+  // Calculate total possible completions this week (up to today)
+  let totalPossible = 0;
+  for (let d = 1; d <= dayOfWeek || (dayOfWeek === 0 && d === 0); d++) {
+    const day = d === 7 ? 0 : d; // Adjust for Sunday
+    for (const habit of habits) {
+      if (habit.daysOfWeek.includes(day)) {
+        totalPossible++;
+      }
+    }
+  }
+
+  // If it's Sunday, include Sunday
+  if (dayOfWeek === 0) {
+    for (const habit of habits) {
+      if (habit.daysOfWeek.includes(0)) {
+        totalPossible++;
+      }
+    }
+  }
+
+  // Count completions this week
+  const completions = await prisma.habitCompletion.count({
+    where: {
+      userId,
+      completionDate: { gte: weekStart },
+    },
+  });
+
+  const percentage = totalPossible > 0 ? Math.round((completions / totalPossible) * 100) : 0;
+
+  return {
+    completed: completions,
+    total: totalPossible,
+    percentage,
   };
 }
 

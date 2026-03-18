@@ -14,7 +14,7 @@ function TabsList({
     <TabsPrimitive.List
       className={cn(
         "inline-flex items-center gap-1 rounded-xl bg-white/[0.04] p-1",
-        className
+        className,
       )}
       {...props}
     />
@@ -29,7 +29,7 @@ function TabsTrigger({
     <TabsPrimitive.Trigger
       className={cn(
         "inline-flex items-center justify-center whitespace-nowrap rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground transition-all hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm",
-        className
+        className,
       )}
       {...props}
     />

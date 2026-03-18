@@ -2,7 +2,11 @@
 
 import { TopBar, MobileNav } from "@/components/navigation";
 
-export default function RankingLayout({ children }: { children: React.ReactNode }) {
+export default function RankingLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <div className="min-h-screen bg-[#0B0B0B]">
       <TopBar />
