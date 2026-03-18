@@ -1,6 +1,6 @@
 "use client";
 
-import { Flame, Target, CalendarDays } from "lucide-react";
+import { Flame, Target } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface ChallengeCardProps {
@@ -38,11 +38,11 @@ export function ChallengeCard({
 
       <div className="relative flex items-center gap-5 max-[380px]:gap-3">
         {/* Progress Circle */}
-        <div className="relative shrink-0">
+        <div className="relative h-[110px] w-[110px] shrink-0 max-[380px]:h-24 max-[380px]:w-24">
           <svg
-            width="110"
-            height="110"
-            className="transform -rotate-90 max-[380px]:h-20 max-[380px]:w-20"
+            viewBox="0 0 110 110"
+            className="h-full w-full transform -rotate-90 overflow-visible"
+            preserveAspectRatio="xMidYMid meet"
           >
             {/* Background circle */}
             <circle
