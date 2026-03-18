@@ -1,5 +1,10 @@
 import { prisma } from "@/lib/prisma";
-import { startOfDay, getWeekStart, endOfDay } from "@/lib/date";
+import {
+  startOfDay,
+  getWeekStart,
+  endOfDay,
+  getDayOfWeekInAppTimeZone,
+} from "@/lib/date";
 import { awardXP, awardCoins } from "./xp.service";
 import { updateStreak } from "./streak.service";
 import { updateMissionsOnHabitComplete } from "./mission.service";
@@ -184,7 +189,11 @@ export async function completeHabit(habitId: string, userId: string) {
   );
 
   // Award XP & coins with logging
-  const xpResult = await awardXP(userId, habit.xpReward, `Completed habit: ${habit.title}`);
+  const xpResult = await awardXP(
+    userId,
+    habit.xpReward,
+    `Completed habit: ${habit.title}`,
+  );
   const coins = await awardCoins(userId, habit.coinReward);
 
   console.log(
@@ -250,38 +259,31 @@ async function checkChallengeProgress(userId: string) {
       },
     });
 
-    console.log(`[HabitService] Challenge day ${newDay}/${challenge.totalDays} for user ${userId}`);
+    console.log(
+      `[HabitService] Challenge day ${newDay}/${challenge.totalDays} for user ${userId}`,
+    );
   }
 }
 
 /**
  * Returns weekly habit completion progress.
  */
-export async function getWeeklyProgress(userId: string): Promise<WeeklyProgress> {
+export async function getWeeklyProgress(
+  userId: string,
+): Promise<WeeklyProgress> {
   const weekStart = getWeekStart();
-  const now = new Date();
-  const dayOfWeek = now.getUTCDay();
+  const dayOfWeek = getDayOfWeekInAppTimeZone();
 
   // Get all active habits
   const habits = await prisma.habit.findMany({
     where: { userId, isActive: true },
   });
 
-  // Calculate total possible completions this week (up to today)
+  // Calculate total possible completions this week (Sunday -> today)
   let totalPossible = 0;
-  for (let d = 1; d <= dayOfWeek || (dayOfWeek === 0 && d === 0); d++) {
-    const day = d === 7 ? 0 : d; // Adjust for Sunday
+  for (let day = 0; day <= dayOfWeek; day++) {
     for (const habit of habits) {
       if (habit.daysOfWeek.includes(day)) {
-        totalPossible++;
-      }
-    }
-  }
-
-  // If it's Sunday, include Sunday
-  if (dayOfWeek === 0) {
-    for (const habit of habits) {
-      if (habit.daysOfWeek.includes(0)) {
         totalPossible++;
       }
     }
@@ -295,7 +297,8 @@ export async function getWeeklyProgress(userId: string): Promise<WeeklyProgress>
     },
   });
 
-  const percentage = totalPossible > 0 ? Math.round((completions / totalPossible) * 100) : 0;
+  const percentage =
+    totalPossible > 0 ? Math.round((completions / totalPossible) * 100) : 0;
 
   return {
     completed: completions,

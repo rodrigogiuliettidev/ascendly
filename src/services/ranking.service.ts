@@ -1,26 +1,59 @@
 import { prisma } from "@/lib/prisma";
-import { getWeekStart } from "@/lib/date";
+import { getWeekStart, getWeekStartUtc } from "@/lib/date";
 import type { RankingEntry } from "@/types";
+
+function getCurrentWeekCandidates(): Date[] {
+  const tzWeekStart = getWeekStart();
+  const utcWeekStart = getWeekStartUtc();
+  const unique = new Map<string, Date>();
+  unique.set(tzWeekStart.toISOString(), tzWeekStart);
+  unique.set(utcWeekStart.toISOString(), utcWeekStart);
+  return Array.from(unique.values());
+}
+
+function aggregateEntries(
+  entries: Array<{
+    userId: string;
+    xpEarned: number;
+    user: { name: string };
+  }>,
+): RankingEntry[] {
+  const byUser = new Map<string, { name: string; xpEarned: number }>();
+
+  for (const entry of entries) {
+    const current = byUser.get(entry.userId);
+    if (current) {
+      current.xpEarned += entry.xpEarned;
+    } else {
+      byUser.set(entry.userId, {
+        name: entry.user.name,
+        xpEarned: entry.xpEarned,
+      });
+    }
+  }
+
+  return Array.from(byUser.entries())
+    .map(([userId, data]) => ({
+      userId,
+      name: data.name,
+      xpEarned: data.xpEarned,
+    }))
+    .sort((a, b) => b.xpEarned - a.xpEarned)
+    .map((entry, index) => ({ ...entry, position: index + 1 }));
+}
 
 /**
  * Returns the global top-N ranking for the current week.
  */
 export async function getWeeklyRanking(limit = 10): Promise<RankingEntry[]> {
-  const weekStart = getWeekStart();
+  const weekStarts = getCurrentWeekCandidates();
 
   const entries = await prisma.weeklyXp.findMany({
-    where: { weekStart },
-    orderBy: { xpEarned: "desc" },
-    take: limit,
+    where: { weekStart: { in: weekStarts } },
     include: { user: { select: { name: true } } },
   });
 
-  return entries.map((entry, index) => ({
-    position: index + 1,
-    userId: entry.userId,
-    name: entry.user.name,
-    xpEarned: entry.xpEarned,
-  }));
+  return aggregateEntries(entries).slice(0, limit);
 }
 
 /**
@@ -29,23 +62,10 @@ export async function getWeeklyRanking(limit = 10): Promise<RankingEntry[]> {
 export async function getUserRankingPosition(
   userId: string,
 ): Promise<{ position: number; xpEarned: number } | null> {
-  const weekStart = getWeekStart();
-
-  const userEntry = await prisma.weeklyXp.findUnique({
-    where: { userId_weekStart: { userId, weekStart } },
-  });
-
-  if (!userEntry) return null;
-
-  // Count how many users earned more XP this week
-  const above = await prisma.weeklyXp.count({
-    where: {
-      weekStart,
-      xpEarned: { gt: userEntry.xpEarned },
-    },
-  });
-
-  return { position: above + 1, xpEarned: userEntry.xpEarned };
+  const ranking = await getWeeklyRanking(10000);
+  const entry = ranking.find((r) => r.userId === userId);
+  if (!entry) return null;
+  return { position: entry.position, xpEarned: entry.xpEarned };
 }
 
 /**
@@ -55,7 +75,7 @@ export async function getFriendsRanking(
   userId: string,
   limit = 10,
 ): Promise<RankingEntry[]> {
-  const weekStart = getWeekStart();
+  const weekStarts = getCurrentWeekCandidates();
 
   // Get IDs of users this user follows
   const follows = await prisma.follow.findMany({
@@ -68,20 +88,13 @@ export async function getFriendsRanking(
 
   const entries = await prisma.weeklyXp.findMany({
     where: {
-      weekStart,
+      weekStart: { in: weekStarts },
       userId: { in: friendIds },
     },
-    orderBy: { xpEarned: "desc" },
-    take: limit,
     include: { user: { select: { name: true } } },
   });
 
-  return entries.map((entry, index) => ({
-    position: index + 1,
-    userId: entry.userId,
-    name: entry.user.name,
-    xpEarned: entry.xpEarned,
-  }));
+  return aggregateEntries(entries).slice(0, limit);
 }
 
 /**

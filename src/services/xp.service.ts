@@ -1,5 +1,10 @@
 import { prisma } from "@/lib/prisma";
-import { getWeekStart, startOfDay, endOfDay } from "@/lib/date";
+import {
+  getWeekStart,
+  getWeekStartUtc,
+  startOfDay,
+  endOfDay,
+} from "@/lib/date";
 import type { XpSummary } from "@/types";
 
 // level = floor(sqrt(xp / 100))
@@ -55,13 +60,29 @@ export async function awardXP(
     },
   });
 
-  // Track weekly XP for ranking
-  const weekStart = getWeekStart();
-  await prisma.weeklyXp.upsert({
-    where: { userId_weekStart: { userId, weekStart } },
-    update: { xpEarned: { increment: amount } },
-    create: { userId, weekStart, xpEarned: amount },
+  // Track weekly XP for ranking (compatible with legacy UTC week bucket).
+  const tzWeekStart = getWeekStart();
+  const utcWeekStart = getWeekStartUtc();
+  const candidates = [tzWeekStart, utcWeekStart];
+
+  const existing = await prisma.weeklyXp.findFirst({
+    where: {
+      userId,
+      weekStart: { in: candidates },
+    },
+    orderBy: { createdAt: "asc" },
   });
+
+  if (existing) {
+    await prisma.weeklyXp.update({
+      where: { id: existing.id },
+      data: { xpEarned: { increment: amount } },
+    });
+  } else {
+    await prisma.weeklyXp.create({
+      data: { userId, weekStart: tzWeekStart, xpEarned: amount },
+    });
+  }
 
   return { xp: newXp, level: newLevel, leveledUp };
 }
@@ -95,7 +116,9 @@ export async function penalizeXP(
     },
   });
 
-  console.log(`[XPService] ⚠️ Penalty: -${amount} XP for user ${userId}: ${reason}`);
+  console.log(
+    `[XPService] ⚠️ Penalty: -${amount} XP for user ${userId}: ${reason}`,
+  );
 
   return { xp: newXp, level: newLevel };
 }

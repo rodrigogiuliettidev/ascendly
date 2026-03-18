@@ -54,7 +54,7 @@ const WEEKDAYS = [
 
 export default function HabitsPage() {
   const { user } = useAuth();
-  const { get, post } = useApi();
+  const { get, post, del } = useApi();
 
   const [habits, setHabits] = useState<HabitData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -196,7 +196,10 @@ export default function HabitsPage() {
           reminderTime: reminderMinutes,
           daysOfWeek: form.daysOfWeek,
         });
-        setHabits((prev) => [...prev, { ...newHabit, completedToday: false, daysOfWeek: form.daysOfWeek }]);
+        setHabits((prev) => [
+          ...prev,
+          { ...newHabit, completedToday: false, daysOfWeek: form.daysOfWeek },
+        ]);
       }
       setDialogOpen(false);
     } catch (err) {
@@ -206,8 +209,16 @@ export default function HabitsPage() {
     }
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
+    const previous = habits;
     setHabits((prev) => prev.filter((h) => h.id !== id));
+
+    try {
+      await del(`/api/habits/${id}`);
+    } catch (err) {
+      setHabits(previous);
+      console.error("Delete habit error:", err);
+    }
   };
 
   if (loading || !user) {
@@ -321,7 +332,7 @@ export default function HabitsPage() {
                               "text-[9px] font-bold w-4 text-center",
                               habit.daysOfWeek.includes(day.value)
                                 ? "text-[#FF7A00]"
-                                : "text-[#333333]"
+                                : "text-[#333333]",
                             )}
                           >
                             {day.label[0]}
@@ -348,7 +359,7 @@ export default function HabitsPage() {
                       </span>
                     </div>
                   </div>
-                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="flex gap-1 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100">
                     <button
                       onClick={() => openEditDialog(habit)}
                       className="p-1.5 rounded-lg hover:bg-white/5 text-[#A1A1A1] hover:text-white transition-colors"
@@ -372,7 +383,11 @@ export default function HabitsPage() {
       {/* Floating Add Button (mobile) */}
       <button
         onClick={openCreateDialog}
-        className="fixed bottom-28 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-[#FF7A00] to-[#FF9F3F] text-white shadow-xl shadow-[#FF7A00]/30 transition-transform hover:scale-105 active:scale-95 sm:hidden"
+        className="fixed right-4 z-40 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-[#FF7A00] to-[#FF9F3F] text-white shadow-xl shadow-[#FF7A00]/30 transition-transform hover:scale-105 active:scale-95 sm:hidden"
+        style={{
+          bottom:
+            "calc(var(--mobile-nav-height) + env(safe-area-inset-bottom) + 0.5rem)",
+        }}
       >
         <Plus className="h-6 w-6" />
       </button>
@@ -470,7 +485,7 @@ export default function HabitsPage() {
                       "flex-1 py-2 rounded-lg text-xs font-semibold transition-all duration-200",
                       form.daysOfWeek.includes(day.value)
                         ? "bg-[#FF7A00] text-white shadow-lg shadow-[#FF7A00]/20"
-                        : "bg-white/5 text-[#666666] hover:bg-white/10 hover:text-[#A1A1A1]"
+                        : "bg-white/5 text-[#666666] hover:bg-white/10 hover:text-[#A1A1A1]",
                     )}
                   >
                     {day.label}

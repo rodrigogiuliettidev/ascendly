@@ -129,7 +129,8 @@ export default function DashboardPage() {
   } | null>(null);
   const [achievements, setAchievements] = useState<AchievementData[]>([]);
   const [challenge, setChallenge] = useState<ChallengeData | null>(null);
-  const [weeklyProgress, setWeeklyProgress] = useState<WeeklyProgressData | null>(null);
+  const [weeklyProgress, setWeeklyProgress] =
+    useState<WeeklyProgressData | null>(null);
   const [xpSummary, setXpSummary] = useState<XpSummaryData | null>(null);
   const [weeklyHabits, setWeeklyHabits] = useState<WeeklyHabitData[]>([]);
   const [showXpModal, setShowXpModal] = useState(false);
@@ -159,6 +160,7 @@ export default function DashboardPage() {
           challengeRes,
           xpRes,
           weeklyHabitsRes,
+          weeklyProgressRes,
         ] = await Promise.allSettled([
           get<HabitData[]>("/api/habits"),
           get<MissionData[]>("/api/missions"),
@@ -171,15 +173,11 @@ export default function DashboardPage() {
           get<ChallengeData>("/api/challenge"),
           get<XpSummaryData>("/api/xp"),
           get<{ habits: WeeklyHabitData[] }>("/api/habits/weekly"),
+          get<WeeklyProgressData>("/api/habits/weekly-progress"),
         ]);
 
         if (habitsRes.status === "fulfilled") {
           setHabits(habitsRes.value);
-          // Calculate weekly progress from habits
-          const completed = habitsRes.value.filter((h) => h.completedToday).length;
-          const total = habitsRes.value.length;
-          const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
-          setWeeklyProgress({ completed, total, percentage });
         }
         if (missionsRes.status === "fulfilled") setMissions(missionsRes.value);
         if (rankingRes.status === "fulfilled") {
@@ -200,6 +198,9 @@ export default function DashboardPage() {
         }
         if (weeklyHabitsRes.status === "fulfilled") {
           setWeeklyHabits(weeklyHabitsRes.value.habits);
+        }
+        if (weeklyProgressRes.status === "fulfilled") {
+          setWeeklyProgress(weeklyProgressRes.value);
         }
       } catch (err) {
         console.error("Dashboard fetch error:", err);
@@ -256,6 +257,16 @@ export default function DashboardPage() {
         const updatedAchievements =
           await get<AchievementData[]>("/api/achievements");
         setAchievements(updatedAchievements.slice(0, 4));
+      } catch {
+        /* ignore */
+      }
+
+      // Refresh weekly progress
+      try {
+        const updatedWeeklyProgress = await get<WeeklyProgressData>(
+          "/api/habits/weekly-progress",
+        );
+        setWeeklyProgress(updatedWeeklyProgress);
       } catch {
         /* ignore */
       }
@@ -442,9 +453,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Weekly Habit Grid */}
-          {weeklyHabits.length > 0 && (
-            <WeeklyHabitGrid habits={weeklyHabits} />
-          )}
+          {weeklyHabits.length > 0 && <WeeklyHabitGrid habits={weeklyHabits} />}
         </div>
 
         {/* Right column — Missions + Achievements + Ranking */}

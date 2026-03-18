@@ -62,16 +62,19 @@ export function MobileNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="fixed bottom-4 left-4 right-4 z-50 lg:hidden">
+    <nav
+      className="fixed inset-x-0 bottom-0 z-50 px-4 pt-2 lg:hidden"
+      style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 0.5rem)" }}
+    >
       <div className="mx-auto max-w-md">
         {/* Outer glow effect */}
         <div className="absolute inset-0 rounded-3xl bg-gradient-to-r from-[#FF7A00]/20 via-transparent to-[#FF7A00]/20 blur-xl opacity-50" />
-        
+
         {/* Main container */}
         <div className="relative rounded-3xl border border-white/[0.08] bg-[#0D0D0D]/95 backdrop-blur-2xl shadow-2xl shadow-black/50">
           {/* Top highlight */}
           <div className="absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
-          
+
           <div className="flex items-center justify-around px-2 py-3">
             {bottomNavItems.map((item) => {
               const isActive =
@@ -92,35 +95,36 @@ export function MobileNav() {
                       <div className="absolute inset-0 rounded-2xl bg-[#FF7A00]/5 blur-md" />
                     </>
                   )}
-                  
+
                   {/* Icon container */}
                   <div
                     className={cn(
                       "relative flex h-10 w-10 items-center justify-center rounded-2xl transition-all duration-300",
-                      isActive 
-                        ? "bg-gradient-to-br from-[#FF7A00]/20 to-[#FF7A00]/5" 
+                      isActive
+                        ? "bg-gradient-to-br from-[#FF7A00]/20 to-[#FF7A00]/5"
                         : "hover:bg-white/5",
                     )}
                   >
                     <item.icon
                       className={cn(
                         "h-5 w-5 transition-all duration-300",
-                        isActive && "scale-110 drop-shadow-[0_0_12px_rgba(255,122,0,0.8)]",
+                        isActive &&
+                          "scale-110 drop-shadow-[0_0_12px_rgba(255,122,0,0.8)]",
                       )}
                       strokeWidth={isActive ? 2.5 : 2}
                     />
-                    
+
                     {/* Active dot indicator with glow */}
                     {isActive && (
                       <span className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 h-1.5 w-1.5 rounded-full bg-[#FF7A00] shadow-[0_0_8px_3px_rgba(255,122,0,0.6)]" />
                     )}
                   </div>
-                  
+
                   {/* Label */}
-                  <span 
+                  <span
                     className={cn(
                       "relative text-[10px] font-semibold transition-all duration-300",
-                      isActive ? "opacity-100" : "opacity-70"
+                      isActive ? "opacity-100" : "opacity-70",
                     )}
                   >
                     {item.label}
@@ -160,11 +164,11 @@ export function DesktopNav() {
                 <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-[#FF7A00]/5 to-transparent" />
               </>
             )}
-            <item.icon 
+            <item.icon
               className={cn(
                 "relative h-4 w-4 transition-all",
-                isActive && "drop-shadow-[0_0_8px_rgba(255,122,0,0.6)]"
-              )} 
+                isActive && "drop-shadow-[0_0_8px_rgba(255,122,0,0.6)]",
+              )}
             />
             <span className="relative">{item.label}</span>
           </Link>

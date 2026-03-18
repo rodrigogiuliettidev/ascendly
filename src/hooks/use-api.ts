@@ -65,5 +65,19 @@ export function useApi() {
     [authFetch],
   );
 
-  return { authFetch, get, post, patch };
+  const del = useCallback(
+    async <T = unknown>(url: string): Promise<T> => {
+      const res = await authFetch(url, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || `DELETE ${url} failed: ${res.status}`);
+      }
+      return res.json();
+    },
+    [authFetch],
+  );
+
+  return { authFetch, get, post, patch, del };
 }

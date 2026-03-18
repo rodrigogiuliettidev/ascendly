@@ -70,7 +70,13 @@ export function NotificationPrompt() {
   if (!visible) return null;
 
   return (
-    <div className="fixed bottom-24 left-4 right-4 z-50 mx-auto max-w-md animate-slide-up sm:bottom-8">
+    <div
+      className="fixed left-4 right-4 z-[60] mx-auto max-w-md animate-slide-up sm:bottom-8"
+      style={{
+        bottom:
+          "calc(var(--mobile-nav-height) + env(safe-area-inset-bottom) + 0.75rem)",
+      }}
+    >
       <div className="rounded-2xl border border-white/[0.06] bg-[#1A1A1A] p-4 shadow-2xl shadow-black/50">
         <div className="flex items-start gap-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#FF7A00]/15">

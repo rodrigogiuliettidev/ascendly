@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/api-auth";
+import { formatDateInAppTimeZone } from "@/lib/date";
 
 export async function GET(request: Request) {
   try {
@@ -19,7 +20,7 @@ export async function GET(request: Request) {
     startDate.setHours(0, 0, 0, 0);
 
     const habits = await prisma.habit.findMany({
-      where: { userId: user.id },
+      where: { userId: user.id, isActive: true },
       include: {
         completions: {
           where: {
@@ -32,7 +33,7 @@ export async function GET(request: Request) {
 
     const gridData = habits.map((habit) => {
       const completionDates = new Set(
-        habit.completions.map((c) => c.completionDate.toISOString().split("T")[0])
+        habit.completions.map((c) => formatDateInAppTimeZone(c.completionDate)),
       );
       return {
         id: habit.id,
@@ -45,6 +46,9 @@ export async function GET(request: Request) {
     return NextResponse.json({ habits: gridData });
   } catch (error) {
     console.error("[API] Error fetching weekly habits:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 },
+    );
   }
 }

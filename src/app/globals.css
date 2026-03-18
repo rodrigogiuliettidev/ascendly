@@ -6,6 +6,7 @@
 
 @layer theme {
   :root {
+    --mobile-nav-height: 6.5rem;
     --radius: 0.75rem;
 
     /* Core palette – black base + orange accent */
@@ -55,6 +56,7 @@
       "calt" 1;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
   }
 
   /* Custom scrollbar */
