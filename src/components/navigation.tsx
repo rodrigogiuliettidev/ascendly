@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -60,11 +61,32 @@ export function TopBar() {
 
 export function MobileNav() {
   const pathname = usePathname();
+  const [isStandalonePwa, setIsStandalonePwa] = useState(false);
+
+  useEffect(() => {
+    const media = window.matchMedia("(display-mode: standalone)");
+
+    const updateStandaloneMode = () => {
+      const isIosStandalone =
+        "standalone" in window.navigator &&
+        Boolean(
+          (window.navigator as Navigator & { standalone?: boolean }).standalone,
+        );
+      setIsStandalonePwa(media.matches || isIosStandalone);
+    };
+
+    updateStandaloneMode();
+    media.addEventListener("change", updateStandaloneMode);
+    return () => media.removeEventListener("change", updateStandaloneMode);
+  }, []);
 
   return (
     <nav
       className="fixed inset-x-0 bottom-0 z-50 px-4 pt-2 max-[380px]:px-2 lg:hidden"
-      style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 0.5rem)" }}
+      style={{
+        bottom: isStandalonePwa ? "10px" : "0px",
+        paddingBottom: "calc(env(safe-area-inset-bottom) + 0.5rem)",
+      }}
     >
       <div className="mx-auto max-w-md">
         {/* Outer glow effect */}
