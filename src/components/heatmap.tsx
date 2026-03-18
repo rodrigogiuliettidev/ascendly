@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 
 interface HeatmapDay {
@@ -32,6 +32,7 @@ function formatDate(dateStr: string): string {
 }
 
 export function Heatmap({ data, weeks = 16 }: HeatmapProps) {
+  const [compactWeeks, setCompactWeeks] = useState(weeks);
   const [tooltip, setTooltip] = useState<{
     date: string;
     count: number;
@@ -39,9 +40,20 @@ export function Heatmap({ data, weeks = 16 }: HeatmapProps) {
     y: number;
   } | null>(null);
 
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 380px)");
+    const applyWeeks = () => {
+      setCompactWeeks(media.matches ? Math.min(weeks, 12) : weeks);
+    };
+
+    applyWeeks();
+    media.addEventListener("change", applyWeeks);
+    return () => media.removeEventListener("change", applyWeeks);
+  }, [weeks]);
+
   const grid = useMemo(() => {
     const today = new Date();
-    const totalDays = weeks * 7;
+    const totalDays = compactWeeks * 7;
     const dataMap = new Map(data.map((d) => [d.date, d.count]));
 
     const days: { date: string; count: number; dayOfWeek: number }[] = [];
@@ -71,7 +83,7 @@ export function Heatmap({ data, weeks = 16 }: HeatmapProps) {
     if (currentWeek.length > 0) weekColumns.push(currentWeek);
 
     return weekColumns;
-  }, [data, weeks]);
+  }, [compactWeeks, data]);
 
   const dayLabels = ["", "Mon", "", "Wed", "", "Fri", ""];
 
@@ -95,13 +107,13 @@ export function Heatmap({ data, weeks = 16 }: HeatmapProps) {
 
   return (
     <div className="w-full relative">
-      <div className="flex gap-1">
+      <div className="flex gap-1 max-[380px]:gap-0.5">
         {/* Day labels */}
-        <div className="flex flex-col gap-[3px] mr-1">
+        <div className="mr-1 flex flex-col gap-[3px] max-[380px]:mr-0.5 max-[380px]:gap-[2px]">
           {dayLabels.map((label, i) => (
             <div
               key={i}
-              className="h-[14px] text-[10px] text-[#A1A1A1] leading-[14px]"
+              className="h-[14px] text-[10px] leading-[14px] text-[#A1A1A1] max-[380px]:h-3 max-[380px]:text-[9px] max-[380px]:leading-3"
             >
               {label}
             </div>
@@ -109,19 +121,27 @@ export function Heatmap({ data, weeks = 16 }: HeatmapProps) {
         </div>
 
         {/* Grid */}
-        <div className="flex gap-[3px] overflow-x-auto">
+        <div className="flex gap-[3px] overflow-x-auto max-[380px]:gap-[2px]">
           {grid.map((week, wi) => (
-            <div key={wi} className="flex flex-col gap-[3px]">
+            <div
+              key={wi}
+              className="flex flex-col gap-[3px] max-[380px]:gap-[2px]"
+            >
               {Array.from({ length: 7 }, (_, di) => {
                 const day = week.find((d) => d.dayOfWeek === di);
                 if (!day) {
-                  return <div key={di} className="w-[14px] h-[14px]" />;
+                  return (
+                    <div
+                      key={di}
+                      className="h-[14px] w-[14px] max-[380px]:h-3 max-[380px]:w-3"
+                    />
+                  );
                 }
                 return (
                   <div
                     key={di}
                     className={cn(
-                      "w-[14px] h-[14px] rounded-[3px] transition-all duration-200 cursor-pointer",
+                      "h-[14px] w-[14px] cursor-pointer rounded-[3px] transition-all duration-200 max-[380px]:h-3 max-[380px]:w-3",
                       getIntensityClass(day.count),
                       "hover:ring-2 hover:ring-[#FF7A00]/50 hover:scale-110",
                     )}
@@ -156,13 +176,13 @@ export function Heatmap({ data, weeks = 16 }: HeatmapProps) {
       )}
 
       {/* Legend */}
-      <div className="flex items-center justify-end gap-1 mt-3">
+      <div className="mt-3 flex items-center justify-end gap-1 max-[380px]:gap-0.5">
         <span className="text-[10px] text-[#A1A1A1] mr-1">Less</span>
         {[0, 1, 2, 3, 4].map((level) => (
           <div
             key={level}
             className={cn(
-              "w-[12px] h-[12px] rounded-[2px]",
+              "h-[12px] w-[12px] rounded-[2px] max-[380px]:h-[10px] max-[380px]:w-[10px]",
               getIntensityClass(level),
             )}
           />

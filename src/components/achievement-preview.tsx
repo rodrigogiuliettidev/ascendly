@@ -41,7 +41,7 @@ export function AchievementPreview({ achievements }: AchievementPreviewProps) {
   const recent = achievements.slice(0, 4);
 
   return (
-    <Card className="bg-[#121212] border-[#1E1E1E]">
+    <Card className="w-full max-w-full overflow-hidden bg-[#121212] border-[#1E1E1E]">
       <CardHeader className="pb-3">
         <CardTitle className="text-white text-base flex items-center gap-2">
           <Trophy className="w-5 h-5 text-[#FF7A00]" />
@@ -53,7 +53,7 @@ export function AchievementPreview({ achievements }: AchievementPreviewProps) {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4 sm:gap-3">
           {recent.map((achievement) => {
             const Icon = iconMap[achievement.icon] || Star;
             return (

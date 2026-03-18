@@ -15,7 +15,7 @@ export function WeeklyProgressCard({
   percentage,
 }: WeeklyProgressProps) {
   return (
-    <div className="rounded-2xl border border-white/[0.06] bg-[#121212] p-4">
+    <div className="w-full max-w-full rounded-2xl border border-white/[0.06] bg-[#121212] p-4">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <TrendingUp className="h-4 w-4 text-[#FF7A00]" />

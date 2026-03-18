@@ -15,9 +15,9 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 
 const bottomNavItems = [
-  { href: "/dashboard", label: "Home", icon: LayoutDashboard },
-  { href: "/habits", label: "Habits", icon: ListChecks },
   { href: "/ranking", label: "Ranking", icon: Trophy },
+  { href: "/habits", label: "Habits", icon: ListChecks },
+  { href: "/dashboard", label: "Home", icon: LayoutDashboard },
   { href: "/social", label: "Social", icon: Users },
   { href: "/profile", label: "Profile", icon: User },
 ];
@@ -63,7 +63,7 @@ export function MobileNav() {
 
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-50 px-4 pt-2 lg:hidden"
+      className="fixed inset-x-0 bottom-0 z-50 px-4 pt-2 max-[380px]:px-2 lg:hidden"
       style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 0.5rem)" }}
     >
       <div className="mx-auto max-w-md">
@@ -75,7 +75,7 @@ export function MobileNav() {
           {/* Top highlight */}
           <div className="absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
 
-          <div className="flex items-center justify-around px-2 py-3">
+          <div className="flex items-center justify-around px-2 py-3 max-[380px]:px-1.5 max-[380px]:py-2.5">
             {bottomNavItems.map((item) => {
               const isActive =
                 pathname === item.href || pathname.startsWith(item.href + "/");
@@ -84,7 +84,7 @@ export function MobileNav() {
                   key={item.href}
                   href={item.href}
                   className={cn(
-                    "relative flex flex-col items-center gap-1 px-4 py-1.5 transition-all duration-300 active:scale-95",
+                    "relative flex flex-col items-center gap-1 px-4 py-1.5 transition-all duration-300 active:scale-95 max-[380px]:px-2.5 max-[380px]:py-1",
                     isActive ? "text-[#FF7A00]" : "text-[#555555]",
                   )}
                 >
@@ -99,7 +99,7 @@ export function MobileNav() {
                   {/* Icon container */}
                   <div
                     className={cn(
-                      "relative flex h-10 w-10 items-center justify-center rounded-2xl transition-all duration-300",
+                      "relative flex h-10 w-10 items-center justify-center rounded-2xl transition-all duration-300 max-[380px]:h-9 max-[380px]:w-9",
                       isActive
                         ? "bg-gradient-to-br from-[#FF7A00]/20 to-[#FF7A00]/5"
                         : "hover:bg-white/5",
@@ -107,7 +107,7 @@ export function MobileNav() {
                   >
                     <item.icon
                       className={cn(
-                        "h-5 w-5 transition-all duration-300",
+                        "h-5 w-5 transition-all duration-300 max-[380px]:h-4 max-[380px]:w-4",
                         isActive &&
                           "scale-110 drop-shadow-[0_0_12px_rgba(255,122,0,0.8)]",
                       )}
@@ -123,7 +123,7 @@ export function MobileNav() {
                   {/* Label */}
                   <span
                     className={cn(
-                      "relative text-[10px] font-semibold transition-all duration-300",
+                      "relative text-[10px] font-semibold transition-all duration-300 max-[380px]:text-[9px]",
                       isActive ? "opacity-100" : "opacity-70",
                     )}
                   >

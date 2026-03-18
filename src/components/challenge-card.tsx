@@ -32,14 +32,18 @@ export function ChallengeCard({
   const strokeDashoffset = circumference - (progress / 100) * circumference;
 
   return (
-    <div className="rounded-2xl border border-white/[0.06] bg-gradient-to-br from-[#121212] to-[#0B0B0B] p-5 overflow-hidden relative">
+    <div className="relative w-full max-w-full overflow-hidden rounded-2xl border border-white/[0.06] bg-gradient-to-br from-[#121212] to-[#0B0B0B] p-5 max-[380px]:p-4">
       {/* Glow effect */}
       <div className="absolute -top-20 -right-20 w-40 h-40 bg-[#FF7A00]/10 rounded-full blur-3xl" />
 
-      <div className="relative flex items-center gap-5">
+      <div className="relative flex items-center gap-5 max-[380px]:gap-3">
         {/* Progress Circle */}
-        <div className="relative">
-          <svg width="110" height="110" className="transform -rotate-90">
+        <div className="relative shrink-0">
+          <svg
+            width="110"
+            height="110"
+            className="transform -rotate-90 max-[380px]:h-20 max-[380px]:w-20"
+          >
             {/* Background circle */}
             <circle
               cx="55"
@@ -83,7 +87,7 @@ export function ChallengeCard({
         </div>
 
         {/* Stats */}
-        <div className="flex-1 space-y-3">
+        <div className="min-w-0 flex-1 space-y-3">
           <div>
             <h3 className="text-sm font-semibold text-white flex items-center gap-2">
               <Flame className="h-4 w-4 text-[#FF7A00]" />

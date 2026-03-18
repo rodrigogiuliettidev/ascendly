@@ -59,7 +59,7 @@ export function WeeklyHabitGrid({ habits }: WeeklyGridProps) {
   }, []);
 
   return (
-    <div className="rounded-2xl border border-white/[0.06] bg-gradient-to-br from-[#121212] to-[#0D0D0D] overflow-hidden">
+    <div className="w-full max-w-full overflow-hidden rounded-2xl border border-white/[0.06] bg-gradient-to-br from-[#121212] to-[#0D0D0D]">
       {/* Header */}
       <div className="flex items-center justify-between border-b border-white/[0.04] px-4 py-3 sm:px-5 sm:py-4">
         <div className="flex items-center gap-2.5">
@@ -80,15 +80,15 @@ export function WeeklyHabitGrid({ habits }: WeeklyGridProps) {
 
       {/* Grid Container - Full Width */}
       <div className="overflow-x-auto scrollbar-hide">
-        <div className="min-w-[20rem] p-3 sm:min-w-full sm:p-5">
+        <div className="min-w-[18rem] p-3 max-[380px]:min-w-[17rem] max-[380px]:px-2 max-[380px]:py-3 sm:min-w-full sm:p-5">
           {/* Header row with day labels */}
           <div className="mb-2.5 flex sm:mb-3">
-            <div className="w-20 shrink-0 pr-2 sm:w-28 lg:w-36" />
-            <div className="flex flex-1 justify-center gap-1 px-1 sm:gap-2 sm:px-2 lg:gap-3">
+            <div className="w-20 shrink-0 pr-2 max-[380px]:w-16 max-[380px]:pr-1 sm:w-28 lg:w-36" />
+            <div className="flex flex-1 justify-center gap-1 px-1 max-[380px]:gap-0.5 max-[380px]:px-0.5 sm:gap-2 sm:px-2 lg:gap-3">
               {WEEKDAY_ORDER.map((day, di) => (
                 <div
                   key={di}
-                  className="flex h-5 w-6 items-center justify-center text-[9px] font-medium text-[#666666] sm:h-6 sm:w-8 sm:text-[10px] lg:w-10 lg:text-xs"
+                  className="flex h-5 w-6 items-center justify-center text-[9px] font-medium text-[#666666] max-[380px]:h-4 max-[380px]:w-5 max-[380px]:text-[8px] sm:h-6 sm:w-8 sm:text-[10px] lg:w-10 lg:text-xs"
                 >
                   {day.substring(0, 1)}
                 </div>
@@ -106,12 +106,12 @@ export function WeeklyHabitGrid({ habits }: WeeklyGridProps) {
                 "hover:bg-white/[0.02]",
               )}
             >
-              <div className="w-20 shrink-0 pr-2 sm:w-28 sm:pr-3 lg:w-36">
-                <span className="block truncate text-[10px] font-medium text-white sm:text-xs lg:text-sm">
+              <div className="w-20 shrink-0 pr-2 max-[380px]:w-16 max-[380px]:pr-1 sm:w-28 sm:pr-3 lg:w-36">
+                <span className="block truncate text-[10px] font-medium text-white max-[380px]:text-[9px] sm:text-xs lg:text-sm">
                   {habit.title}
                 </span>
               </div>
-              <div className="flex flex-1 justify-center gap-1 px-1 sm:gap-2 sm:px-2 lg:gap-3">
+              <div className="flex flex-1 justify-center gap-1 px-1 max-[380px]:gap-0.5 max-[380px]:px-0.5 sm:gap-2 sm:px-2 lg:gap-3">
                 {currentWeek.dates.map((date, di) => {
                   const dateStr = formatDate(date);
                   const dayOfWeek = DAY_MAP[di];
@@ -124,7 +124,7 @@ export function WeeklyHabitGrid({ habits }: WeeklyGridProps) {
                     <div
                       key={di}
                       className={cn(
-                        "flex h-6 w-6 items-center justify-center rounded-lg transition-all duration-200 sm:h-8 sm:w-8 sm:rounded-xl lg:h-10 lg:w-10",
+                        "flex h-6 w-6 items-center justify-center rounded-lg transition-all duration-200 max-[380px]:h-5 max-[380px]:w-5 max-[380px]:rounded-md sm:h-8 sm:w-8 sm:rounded-xl lg:h-10 lg:w-10",
                         isToday &&
                           "ring-2 ring-[#FF7A00]/40 ring-offset-1 ring-offset-[#0D0D0D]",
                       )}
@@ -132,7 +132,7 @@ export function WeeklyHabitGrid({ habits }: WeeklyGridProps) {
                     >
                       <div
                         className={cn(
-                          "h-4 w-4 cursor-pointer rounded-full transition-all duration-300 sm:h-6 sm:w-6 lg:h-7 lg:w-7",
+                          "h-4 w-4 cursor-pointer rounded-full transition-all duration-300 max-[380px]:h-3 max-[380px]:w-3 sm:h-6 sm:w-6 lg:h-7 lg:w-7",
                           isFuture
                             ? "bg-white/[0.03]"
                             : isCompleted
@@ -151,7 +151,7 @@ export function WeeklyHabitGrid({ habits }: WeeklyGridProps) {
 
           {/* Week labels */}
           <div className="flex mt-4 pt-3 border-t border-white/[0.04]">
-            <div className="w-20 shrink-0 sm:w-28 lg:w-36" />
+            <div className="w-20 shrink-0 max-[380px]:w-16 sm:w-28 lg:w-36" />
             <div className="flex-1 text-center px-2">
               <span className="text-[10px] lg:text-xs text-[#666666] font-medium">
                 {currentWeek.label}

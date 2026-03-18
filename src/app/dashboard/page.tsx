@@ -307,7 +307,7 @@ export default function DashboardPage() {
   const rankingSubtitle = userPosition ? "This week" : "No data yet";
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 overflow-x-clip">
       {/* ── Hero: Avatar + Level + XP + Streak ── */}
       <div className="rounded-2xl border border-white/[0.06] bg-[#121212] p-5">
         <div className="flex items-center gap-4 mb-4">
@@ -399,9 +399,9 @@ export default function DashboardPage() {
       </div>
 
       {/* ── Main Grid ── */}
-      <div className="grid gap-6 lg:grid-cols-5">
+      <div className="grid items-start gap-6 lg:grid-cols-5">
         {/* Today's Habits — 3 columns */}
-        <div className="lg:col-span-3 space-y-4">
+        <div className="space-y-4 min-w-0 lg:col-span-3">
           <div className="flex items-center justify-between">
             <h2 className="text-base font-semibold text-white flex items-center gap-2">
               <Target className="h-4 w-4 text-[#FF7A00]" />
@@ -457,7 +457,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Right column — Missions + Achievements + Ranking */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="space-y-6 min-w-0 lg:col-span-2">
           {/* Achievements Preview */}
           <AchievementPreview
             achievements={achievements.map((a) => ({
