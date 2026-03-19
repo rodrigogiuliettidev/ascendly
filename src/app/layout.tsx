@@ -10,6 +10,18 @@ export const metadata: Metadata = {
   description:
     "Complete habits, earn XP, climb rankings, and unlock achievements.",
   manifest: "/manifest.json",
+  icons: {
+    icon: [
+      { url: "/icons/icon-72x72.png", sizes: "72x72", type: "image/png" },
+      {
+        url: "/icons/icon-192x192.png",
+        sizes: "192x192",
+        type: "image/png",
+      },
+    ],
+    shortcut: "/icons/icon-192x192.png",
+    apple: "/icons/icon-192x192.png",
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
