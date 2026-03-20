@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/hooks/use-auth";
 
 const bottomNavItems = [
   { href: "/ranking", label: "Ranking", icon: Trophy },
@@ -23,7 +24,19 @@ const bottomNavItems = [
   { href: "/profile", label: "Profile", icon: User },
 ];
 
+function getInitials(name: string): string {
+  return name
+    .split(" ")
+    .map((w) => w[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+}
+
 export function TopBar() {
+  const { user } = useAuth();
+  const userInitials = user?.name ? getInitials(user.name) : "";
+
   return (
     <header className="sticky top-0 z-40 border-b border-white/[0.06] bg-[#0B0B0B]/80 backdrop-blur-xl">
       <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4 lg:px-8">
@@ -50,7 +63,9 @@ export function TopBar() {
           </Link>
           <Link href="/profile">
             <Avatar className="h-8 w-8 ring-2 ring-[#FF7A00]/30">
-              <AvatarFallback className="text-xs">RD</AvatarFallback>
+              <AvatarFallback className="text-xs">
+                {userInitials}
+              </AvatarFallback>
             </Avatar>
           </Link>
         </div>
