@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/api-auth";
-import { formatDateInAppTimeZone } from "@/lib/date";
+import { getLogicalDateString, getDaysAgo } from "@/lib/date";
 
 export async function GET(request: Request) {
   try {
@@ -14,10 +14,12 @@ export async function GET(request: Request) {
     const weeksParam = url.searchParams.get("weeks");
     const weeks = weeksParam ? parseInt(weeksParam, 10) : 4;
 
-    const today = new Date();
-    const startDate = new Date(today);
-    startDate.setDate(startDate.getDate() - weeks * 7);
-    startDate.setHours(0, 0, 0, 0);
+    const startDate = getDaysAgo(weeks * 7);
+
+    console.log(
+      `[WeeklyHabits] Fetching for user=${user.id}, weeks=${weeks}, ` +
+        `since=${startDate.toISOString()}`,
+    );
 
     const habits = await prisma.habit.findMany({
       where: { userId: user.id, isActive: true },
@@ -33,7 +35,7 @@ export async function GET(request: Request) {
 
     const gridData = habits.map((habit) => {
       const completionDates = new Set(
-        habit.completions.map((c) => formatDateInAppTimeZone(c.completionDate)),
+        habit.completions.map((c) => getLogicalDateString(c.completionDate)),
       );
       return {
         id: habit.id,
@@ -42,6 +44,8 @@ export async function GET(request: Request) {
         completions: Array.from(completionDates),
       };
     });
+
+    console.log(`[WeeklyHabits] Returning ${gridData.length} habits`);
 
     return NextResponse.json({ habits: gridData });
   } catch (error) {

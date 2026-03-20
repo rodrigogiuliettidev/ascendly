@@ -22,8 +22,21 @@ function getIntensityClass(count: number): string {
   return "bg-[#FF7A00]";
 }
 
-function formatDate(dateStr: string): string {
-  const date = new Date(dateStr);
+/**
+ * Format date as YYYY-MM-DD using LOCAL timezone.
+ * Must match the server's getLogicalDateString format.
+ */
+function formatDateKey(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function formatDateDisplay(dateStr: string): string {
+  // Parse YYYY-MM-DD as local date
+  const [year, month, day] = dateStr.split("-").map(Number);
+  const date = new Date(year, month - 1, day);
   return date.toLocaleDateString("en-US", {
     weekday: "short",
     month: "short",
@@ -56,18 +69,26 @@ export function Heatmap({ data, weeks = 16 }: HeatmapProps) {
     const totalDays = compactWeeks * 7;
     const dataMap = new Map(data.map((d) => [d.date, d.count]));
 
+    // Debug: log data received
+    console.log("[Heatmap] Data received:", data.slice(-7));
+
     const days: { date: string; count: number; dayOfWeek: number }[] = [];
 
     for (let i = totalDays - 1; i >= 0; i--) {
       const date = new Date(today);
       date.setDate(date.getDate() - i);
-      const key = date.toISOString().split("T")[0];
+      // Use LOCAL date format, not UTC
+      const key = formatDateKey(date);
+      const count = dataMap.get(key) || 0;
       days.push({
         date: key,
-        count: dataMap.get(key) || 0,
+        count,
         dayOfWeek: date.getDay(),
       });
     }
+
+    // Debug: log last few days
+    console.log("[Heatmap] Last 7 days:", days.slice(-7));
 
     // Group by weeks
     const weekColumns: (typeof days)[] = [];
@@ -170,7 +191,7 @@ export function Heatmap({ data, weeks = 16 }: HeatmapProps) {
             {tooltip.count} habit{tooltip.count !== 1 ? "s" : ""}
           </p>
           <p className="text-[10px] text-[#A1A1A1]">
-            {formatDate(tooltip.date)}
+            {formatDateDisplay(tooltip.date)}
           </p>
         </div>
       )}

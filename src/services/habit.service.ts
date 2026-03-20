@@ -2,8 +2,8 @@ import { prisma } from "@/lib/prisma";
 import {
   startOfDay,
   getWeekStart,
-  endOfDay,
   getDayOfWeekInAppTimeZone,
+  getLogicalDateString,
 } from "@/lib/date";
 import { awardXP, awardCoins } from "./xp.service";
 import { updateStreak } from "./streak.service";
@@ -89,9 +89,14 @@ export async function deleteHabit(habitId: string, userId: string) {
 export async function getUserHabitsToday(
   userId: string,
 ): Promise<HabitWithCompletion[]> {
-  const todayStart = startOfDay();
-  const today = new Date();
-  const dayOfWeek = today.getUTCDay(); // 0 = Sunday
+  const now = new Date();
+  const todayStart = startOfDay(now);
+  const dayOfWeek = getDayOfWeekInAppTimeZone(now);
+
+  console.log(
+    `[HabitService] getUserHabitsToday: userId=${userId}, ` +
+    `todayStart=${todayStart.toISOString()}, dayOfWeek=${dayOfWeek}`,
+  );
 
   const habits = await prisma.habit.findMany({
     where: { userId, isActive: true },
@@ -129,7 +134,9 @@ export async function getScheduledHabitsToday(
  * Returns all active habits (regardless of day).
  */
 export async function getAllHabits(userId: string) {
-  const todayStart = startOfDay();
+  const now = new Date();
+  const todayStart = startOfDay(now);
+  const dayOfWeek = getDayOfWeekInAppTimeZone(now);
 
   const habits = await prisma.habit.findMany({
     where: { userId, isActive: true },
@@ -141,9 +148,6 @@ export async function getAllHabits(userId: string) {
     },
     orderBy: { createdAt: "asc" },
   });
-
-  const today = new Date();
-  const dayOfWeek = today.getUTCDay();
 
   return habits.map((habit) => ({
     ...habit,
@@ -162,8 +166,16 @@ export async function completeHabit(habitId: string, userId: string) {
     where: { id: habitId, userId },
   });
 
+  const now = new Date();
+  const todayStart = startOfDay(now);
+  const todayString = getLogicalDateString(now);
+
+  console.log(
+    `[HabitService] completeHabit: habit="${habit.title}", ` +
+    `todayStart=${todayStart.toISOString()}, todayString=${todayString}`,
+  );
+
   // Check if already completed today
-  const todayStart = startOfDay();
   const existing = await prisma.habitCompletion.findFirst({
     where: {
       habitId,
@@ -186,7 +198,8 @@ export async function completeHabit(habitId: string, userId: string) {
   });
 
   console.log(
-    `[HabitService] ✅ Habit "${habit.title}" completed by user ${userId}`,
+    `[HabitService] ✅ Habit "${habit.title}" completed by user ${userId} ` +
+    `(completionDate=${completion.completionDate.toISOString()})`,
   );
 
   // Award XP & coins with logging
@@ -239,16 +252,36 @@ export async function completeHabit(habitId: string, userId: string) {
 
 /**
  * Checks if user completed all scheduled habits for today and advances challenge.
+ * Only advances ONCE per day (uses lastAdvancedDate to prevent double-counting).
  */
 async function checkChallengeProgress(userId: string) {
+  const now = new Date();
+  const todayString = getLogicalDateString(now);
+
   const challenge = await prisma.challenge.findUnique({
     where: { userId },
   });
 
   if (!challenge || !challenge.isActive) return;
 
+  // Check if we already advanced today
+  if (challenge.lastAdvancedDate) {
+    const lastAdvancedString = getLogicalDateString(challenge.lastAdvancedDate);
+    if (lastAdvancedString === todayString) {
+      console.log(
+        `[HabitService] Challenge already advanced today (${todayString}), skipping`,
+      );
+      return;
+    }
+  }
+
   const todayHabits = await getScheduledHabitsToday(userId);
   const allCompleted = todayHabits.every((h) => h.completedToday);
+
+  console.log(
+    `[HabitService] checkChallengeProgress: user=${userId}, ` +
+    `scheduled=${todayHabits.length}, allCompleted=${allCompleted}`,
+  );
 
   if (allCompleted && todayHabits.length > 0) {
     const newDay = challenge.currentDay + 1;
@@ -260,11 +293,12 @@ async function checkChallengeProgress(userId: string) {
         currentDay: isComplete ? challenge.totalDays : newDay,
         isActive: !isComplete,
         endDate: isComplete ? new Date() : undefined,
+        lastAdvancedDate: now,
       },
     });
 
     console.log(
-      `[HabitService] Challenge day ${newDay}/${challenge.totalDays} for user ${userId}`,
+      `[HabitService] Challenge day ${challenge.currentDay} → ${newDay}/${challenge.totalDays} for user ${userId}`,
     );
   }
 }

@@ -67,6 +67,7 @@ export async function resetChallenge(userId: string) {
       currentDay: 1,
       startDate: new Date(),
       endDate: null,
+      lastAdvancedDate: null,
       isActive: true,
     },
     create: {

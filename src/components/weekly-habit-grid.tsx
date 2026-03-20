@@ -16,10 +16,29 @@ interface WeeklyGridProps {
 const DAY_MAP = [0, 1, 2, 3, 4, 5, 6]; // Map index to JS day (Sun=0, Sat=6)
 const WEEKDAY_ORDER = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
+/**
+ * Format date as YYYY-MM-DD using LOCAL timezone.
+ * This must match the server's getLogicalDateString function.
+ */
+function formatDate(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+/**
+ * Get today's date string in local timezone.
+ */
+function getTodayString(): string {
+  return formatDate(new Date());
+}
+
 function getWeekDates(weekOffset: number): Date[] {
   const today = new Date();
-  const currentDay = today.getDay();
+  const currentDay = today.getDay(); // Local day of week (0-6)
 
+  // Get Sunday of the current/offset week
   const sunday = new Date(today);
   sunday.setDate(today.getDate() - currentDay - weekOffset * 7);
   sunday.setHours(0, 0, 0, 0);
@@ -31,13 +50,6 @@ function getWeekDates(weekOffset: number): Date[] {
     dates.push(d);
   }
   return dates;
-}
-
-function formatDate(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
 }
 
 function formatWeekLabel(dates: Date[]): string {
@@ -57,6 +69,8 @@ export function WeeklyHabitGrid({ habits }: WeeklyGridProps) {
     const dates = getWeekDates(0);
     return { dates, label: formatWeekLabel(dates) };
   }, []);
+
+  const todayStr = useMemo(() => getTodayString(), []);
 
   return (
     <div className="w-full max-w-full overflow-hidden rounded-2xl border border-white/[0.06] bg-gradient-to-br from-[#121212] to-[#0D0D0D]">
@@ -117,8 +131,8 @@ export function WeeklyHabitGrid({ habits }: WeeklyGridProps) {
                   const dayOfWeek = DAY_MAP[di];
                   const isScheduled = habit.daysOfWeek.includes(dayOfWeek);
                   const isCompleted = habit.completions.includes(dateStr);
-                  const isToday = dateStr === formatDate(new Date());
-                  const isFuture = date > new Date();
+                  const isToday = dateStr === todayStr;
+                  const isFuture = dateStr > todayStr;
 
                   return (
                     <div
