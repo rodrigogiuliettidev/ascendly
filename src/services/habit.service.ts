@@ -10,6 +10,7 @@ import { updateStreak } from "./streak.service";
 import { updateMissionsOnHabitComplete } from "./mission.service";
 import { checkAndUnlockAchievements } from "./achievement.service";
 import { notifyHabitCompleted } from "./notification.service";
+import { updateChallengeProgress } from "./user-challenge.service";
 import type {
   CreateHabitInput,
   UpdateHabitInput,
@@ -216,6 +217,9 @@ export async function completeHabit(habitId: string, userId: string) {
 
   // Check if challenge day should advance (all habits completed)
   await checkChallengeProgress(userId);
+
+  // Update user challenge progress (social challenges between friends)
+  await updateChallengeProgress(userId);
 
   // Send habit completed notification (async, don't await)
   notifyHabitCompleted(userId, habit.title, habit.xpReward).catch(

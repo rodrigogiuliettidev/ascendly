@@ -25,12 +25,17 @@ const dirs = [
   "src/app/api/ranking",
   "src/app/api/social/follow",
   "src/app/api/social/friends",
+  "src/app/api/social/request",
+  "src/app/api/social/request/accept",
+  "src/app/api/social/request/reject",
+  "src/app/api/social/requests",
   "src/app/api/notifications",
   "src/app/api/missions",
   "src/app/api/achievements",
   "src/app/api/users/[id]",
   "src/app/api/users/register-token",
   "src/app/api/users/notification-preferences",
+  "src/app/api/users/search",
   "src/app/api/cron/reminders",
   "src/app/api/cron/streak-warnings",
   "src/app/api/cron/penalties",
@@ -39,6 +44,9 @@ const dirs = [
   "src/app/api/habits/weekly",
   "src/app/api/xp",
   "src/app/api/challenge",
+  "src/app/api/user-challenges",
+  "src/app/api/user-challenges/accept",
+  "src/app/api/user-challenges/reject",
   "src/components/ui",
   "src/lib",
   "src/services",
@@ -696,6 +704,288 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error("POST /api/cron/penalties error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+`,
+  },
+  {
+    path: "src/app/api/social/request/route.ts",
+    content: `import { NextRequest, NextResponse } from "next/server";
+import { sendFollowRequest } from "@/services/social.service";
+import { authenticateRequest } from "@/lib/api-auth";
+
+export async function POST(req: NextRequest) {
+  try {
+    const auth = authenticateRequest(req);
+    if (auth instanceof NextResponse) return auth;
+
+    const { receiverId } = await req.json();
+
+    if (!receiverId) {
+      return NextResponse.json({ error: "Receiver ID required" }, { status: 400 });
+    }
+
+    const request = await sendFollowRequest(auth.userId, receiverId);
+    return NextResponse.json(request);
+  } catch (error) {
+    console.error("[API] Send follow request error:", error);
+    const message = error instanceof Error ? error.message : "Failed to send request";
+    return NextResponse.json({ error: message }, { status: 400 });
+  }
+}
+`,
+  },
+  {
+    path: "src/app/api/social/requests/route.ts",
+    content: `import { NextRequest, NextResponse } from "next/server";
+import { getPendingRequests, getSentRequests } from "@/services/social.service";
+import { authenticateRequest } from "@/lib/api-auth";
+
+export async function GET(req: NextRequest) {
+  try {
+    const auth = authenticateRequest(req);
+    if (auth instanceof NextResponse) return auth;
+
+    const url = new URL(req.url);
+    const type = url.searchParams.get("type") || "received";
+
+    if (type === "sent") {
+      const requests = await getSentRequests(auth.userId);
+      return NextResponse.json(requests);
+    }
+
+    const requests = await getPendingRequests(auth.userId);
+    return NextResponse.json(requests);
+  } catch (error) {
+    console.error("[API] Get follow requests error:", error);
+    return NextResponse.json({ error: "Failed to get requests" }, { status: 500 });
+  }
+}
+`,
+  },
+  {
+    path: "src/app/api/social/request/accept/route.ts",
+    content: `import { NextRequest, NextResponse } from "next/server";
+import { acceptFollowRequest } from "@/services/social.service";
+import { authenticateRequest } from "@/lib/api-auth";
+
+export async function POST(req: NextRequest) {
+  try {
+    const auth = authenticateRequest(req);
+    if (auth instanceof NextResponse) return auth;
+
+    const { requestId } = await req.json();
+
+    if (!requestId) {
+      return NextResponse.json({ error: "Request ID required" }, { status: 400 });
+    }
+
+    const result = await acceptFollowRequest(requestId, auth.userId);
+    return NextResponse.json(result);
+  } catch (error) {
+    console.error("[API] Accept follow request error:", error);
+    const message = error instanceof Error ? error.message : "Failed to accept request";
+    return NextResponse.json({ error: message }, { status: 400 });
+  }
+}
+`,
+  },
+  {
+    path: "src/app/api/social/request/reject/route.ts",
+    content: `import { NextRequest, NextResponse } from "next/server";
+import { rejectFollowRequest } from "@/services/social.service";
+import { authenticateRequest } from "@/lib/api-auth";
+
+export async function POST(req: NextRequest) {
+  try {
+    const auth = authenticateRequest(req);
+    if (auth instanceof NextResponse) return auth;
+
+    const { requestId } = await req.json();
+
+    if (!requestId) {
+      return NextResponse.json({ error: "Request ID required" }, { status: 400 });
+    }
+
+    const result = await rejectFollowRequest(requestId, auth.userId);
+    return NextResponse.json(result);
+  } catch (error) {
+    console.error("[API] Reject follow request error:", error);
+    const message = error instanceof Error ? error.message : "Failed to reject request";
+    return NextResponse.json({ error: message }, { status: 400 });
+  }
+}
+`,
+  },
+  {
+    path: "src/app/api/social/friends/route.ts",
+    content: `import { NextRequest, NextResponse } from "next/server";
+import { getFriends, removeFriend } from "@/services/social.service";
+import { authenticateRequest } from "@/lib/api-auth";
+
+export async function GET(req: NextRequest) {
+  try {
+    const auth = authenticateRequest(req);
+    if (auth instanceof NextResponse) return auth;
+
+    const friends = await getFriends(auth.userId);
+    return NextResponse.json(friends);
+  } catch (error) {
+    console.error("[API] Get friends error:", error);
+    return NextResponse.json({ error: "Failed to get friends" }, { status: 500 });
+  }
+}
+
+export async function DELETE(req: NextRequest) {
+  try {
+    const auth = authenticateRequest(req);
+    if (auth instanceof NextResponse) return auth;
+
+    const { friendId } = await req.json();
+
+    if (!friendId) {
+      return NextResponse.json({ error: "Friend ID required" }, { status: 400 });
+    }
+
+    const result = await removeFriend(auth.userId, friendId);
+    return NextResponse.json(result);
+  } catch (error) {
+    console.error("[API] Remove friend error:", error);
+    const message = error instanceof Error ? error.message : "Failed to remove friend";
+    return NextResponse.json({ error: message }, { status: 400 });
+  }
+}
+`,
+  },
+  {
+    path: "src/app/api/users/search/route.ts",
+    content: `import { NextRequest, NextResponse } from "next/server";
+import { searchUsers } from "@/services/social.service";
+import { authenticateRequest } from "@/lib/api-auth";
+
+export async function GET(req: NextRequest) {
+  try {
+    const auth = authenticateRequest(req);
+    if (auth instanceof NextResponse) return auth;
+
+    const url = new URL(req.url);
+    const query = url.searchParams.get("q") || "";
+
+    const users = await searchUsers(query, auth.userId);
+    return NextResponse.json(users);
+  } catch (error) {
+    console.error("[API] Search users error:", error);
+    return NextResponse.json({ error: "Failed to search users" }, { status: 500 });
+  }
+}
+`,
+  },
+  {
+    path: "src/app/api/user-challenges/route.ts",
+    content: `import { NextRequest, NextResponse } from "next/server";
+import { createUserChallenge, getUserChallenges, getPendingChallenges } from "@/services/user-challenge.service";
+import { authenticateRequest } from "@/lib/api-auth";
+
+export async function GET(req: NextRequest) {
+  try {
+    const auth = authenticateRequest(req);
+    if (auth instanceof NextResponse) return auth;
+
+    const url = new URL(req.url);
+    const pending = url.searchParams.get("pending") === "true";
+
+    if (pending) {
+      const challenges = await getPendingChallenges(auth.userId);
+      return NextResponse.json(challenges);
+    }
+
+    const challenges = await getUserChallenges(auth.userId);
+    return NextResponse.json(challenges);
+  } catch (error) {
+    console.error("[API] Get user challenges error:", error);
+    return NextResponse.json({ error: "Failed to get challenges" }, { status: 500 });
+  }
+}
+
+export async function POST(req: NextRequest) {
+  try {
+    const auth = authenticateRequest(req);
+    if (auth instanceof NextResponse) return auth;
+
+    const body = await req.json();
+    const { receiverId, title, targetCount, durationDays, description } = body;
+
+    if (!receiverId || !title) {
+      return NextResponse.json({ error: "Receiver ID and title required" }, { status: 400 });
+    }
+
+    const challenge = await createUserChallenge(
+      auth.userId,
+      receiverId,
+      title,
+      targetCount,
+      durationDays,
+      description
+    );
+    return NextResponse.json(challenge);
+  } catch (error) {
+    console.error("[API] Create user challenge error:", error);
+    const message = error instanceof Error ? error.message : "Failed to create challenge";
+    return NextResponse.json({ error: message }, { status: 400 });
+  }
+}
+`,
+  },
+  {
+    path: "src/app/api/user-challenges/accept/route.ts",
+    content: `import { NextRequest, NextResponse } from "next/server";
+import { acceptUserChallenge } from "@/services/user-challenge.service";
+import { authenticateRequest } from "@/lib/api-auth";
+
+export async function POST(req: NextRequest) {
+  try {
+    const auth = authenticateRequest(req);
+    if (auth instanceof NextResponse) return auth;
+
+    const { challengeId } = await req.json();
+
+    if (!challengeId) {
+      return NextResponse.json({ error: "Challenge ID required" }, { status: 400 });
+    }
+
+    const result = await acceptUserChallenge(challengeId, auth.userId);
+    return NextResponse.json(result);
+  } catch (error) {
+    console.error("[API] Accept user challenge error:", error);
+    const message = error instanceof Error ? error.message : "Failed to accept challenge";
+    return NextResponse.json({ error: message }, { status: 400 });
+  }
+}
+`,
+  },
+  {
+    path: "src/app/api/user-challenges/reject/route.ts",
+    content: `import { NextRequest, NextResponse } from "next/server";
+import { rejectUserChallenge } from "@/services/user-challenge.service";
+import { authenticateRequest } from "@/lib/api-auth";
+
+export async function POST(req: NextRequest) {
+  try {
+    const auth = authenticateRequest(req);
+    if (auth instanceof NextResponse) return auth;
+
+    const { challengeId } = await req.json();
+
+    if (!challengeId) {
+      return NextResponse.json({ error: "Challenge ID required" }, { status: 400 });
+    }
+
+    const result = await rejectUserChallenge(challengeId, auth.userId);
+    return NextResponse.json(result);
+  } catch (error) {
+    console.error("[API] Reject user challenge error:", error);
+    const message = error instanceof Error ? error.message : "Failed to reject challenge";
+    return NextResponse.json({ error: message }, { status: 400 });
   }
 }
 `,
