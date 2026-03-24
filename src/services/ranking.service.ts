@@ -5,7 +5,7 @@ function toRankingEntries(
   users: Array<{ id: string; name: string; xp: number }>,
   options?: { fillToTen?: boolean },
 ): RankingEntry[] {
-  const entries = users.map((user, index) => ({
+  const entries: RankingEntry[] = users.map((user, index) => ({
     position: index + 1,
     userId: user.id,
     name: user.name,
