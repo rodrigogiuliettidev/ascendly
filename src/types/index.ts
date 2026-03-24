@@ -84,6 +84,7 @@ export type RankingEntry = {
   userId: string;
   name: string;
   xpEarned: number;
+  isPlaceholder?: boolean;
 };
 
 export type DashboardData = {

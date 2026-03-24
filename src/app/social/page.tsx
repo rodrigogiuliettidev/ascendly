@@ -100,7 +100,9 @@ export default function SocialPage() {
   const [friends, setFriends] = useState<Friend[]>([]);
   const [pendingRequests, setPendingRequests] = useState<PendingRequest[]>([]);
   const [challenges, setChallenges] = useState<UserChallenge[]>([]);
-  const [pendingChallenges, setPendingChallenges] = useState<PendingChallenge[]>([]);
+  const [pendingChallenges, setPendingChallenges] = useState<
+    PendingChallenge[]
+  >([]);
   const [isSearching, setIsSearching] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("friends");
@@ -141,7 +143,11 @@ export default function SocialPage() {
 
   // Initial load
   useEffect(() => {
-    Promise.all([fetchFriends(), fetchPendingRequests(), fetchChallenges()]).finally(() => {
+    Promise.all([
+      fetchFriends(),
+      fetchPendingRequests(),
+      fetchChallenges(),
+    ]).finally(() => {
       setIsLoading(false);
     });
   }, [fetchFriends, fetchPendingRequests, fetchChallenges]);
@@ -156,7 +162,9 @@ export default function SocialPage() {
     const timer = setTimeout(async () => {
       setIsSearching(true);
       try {
-        const res = await authFetch(`/api/users/search?q=${encodeURIComponent(search)}`);
+        const res = await authFetch(
+          `/api/users/search?q=${encodeURIComponent(search)}`,
+        );
         if (res.ok) {
           const data = await res.json();
           console.log("[Social] Search results:", data);
@@ -231,7 +239,9 @@ export default function SocialPage() {
   };
 
   const activeChallenges = challenges.filter((c) => c.status === "ACTIVE");
-  const completedChallenges = challenges.filter((c) => c.status === "COMPLETED");
+  const completedChallenges = challenges.filter(
+    (c) => c.status === "COMPLETED",
+  );
 
   if (isLoading) {
     return (
@@ -313,7 +323,9 @@ export default function SocialPage() {
                 <div className="text-center py-12 text-[#A1A1A1]">
                   <Users className="h-8 w-8 mx-auto mb-2 opacity-40" />
                   <p className="text-sm">No friends yet</p>
-                  <p className="text-xs mt-1">Search for users to send friend requests</p>
+                  <p className="text-xs mt-1">
+                    Search for users to send friend requests
+                  </p>
                 </div>
               ) : (
                 friends.map((friend, i) => (
@@ -357,7 +369,8 @@ export default function SocialPage() {
                     Friend Requests
                   </p>
                 )}
-                {pendingRequests.length === 0 && pendingChallenges.length === 0 ? (
+                {pendingRequests.length === 0 &&
+                pendingChallenges.length === 0 ? (
                   <div className="text-center py-12 text-[#A1A1A1]">
                     <Clock className="h-8 w-8 mx-auto mb-2 opacity-40" />
                     <p className="text-sm">No pending requests</p>
@@ -403,13 +416,16 @@ export default function SocialPage() {
                 </div>
               )}
 
-              {activeChallenges.length === 0 && completedChallenges.length === 0 && (
-                <div className="text-center py-12 text-[#A1A1A1]">
-                  <Swords className="h-8 w-8 mx-auto mb-2 opacity-40" />
-                  <p className="text-sm">No challenges yet</p>
-                  <p className="text-xs mt-1">Challenge a friend to compete!</p>
-                </div>
-              )}
+              {activeChallenges.length === 0 &&
+                completedChallenges.length === 0 && (
+                  <div className="text-center py-12 text-[#A1A1A1]">
+                    <Swords className="h-8 w-8 mx-auto mb-2 opacity-40" />
+                    <p className="text-sm">No challenges yet</p>
+                    <p className="text-xs mt-1">
+                      Challenge a friend to compete!
+                    </p>
+                  </div>
+                )}
             </div>
           </TabsContent>
         </Tabs>
@@ -444,7 +460,12 @@ function SearchResultCard({
         );
       case "PENDING_RECEIVED":
         return (
-          <Button variant="outline" size="sm" disabled className="gap-1.5 text-[#FF7A00]">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled
+            className="gap-1.5 text-[#FF7A00]"
+          >
             <Clock className="h-3.5 w-3.5" />
             Respond
           </Button>
@@ -566,21 +587,29 @@ function FriendCard({
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-sm text-[#A1A1A1]">Target (habits)</label>
+                <label className="text-sm text-[#A1A1A1]">
+                  Target (habits)
+                </label>
                 <Input
                   type="number"
                   value={targetCount}
-                  onChange={(e) => setTargetCount(parseInt(e.target.value) || 20)}
+                  onChange={(e) =>
+                    setTargetCount(parseInt(e.target.value) || 20)
+                  }
                   min={1}
                   className="mt-1"
                 />
               </div>
               <div>
-                <label className="text-sm text-[#A1A1A1]">Duration (days)</label>
+                <label className="text-sm text-[#A1A1A1]">
+                  Duration (days)
+                </label>
                 <Input
                   type="number"
                   value={durationDays}
-                  onChange={(e) => setDurationDays(parseInt(e.target.value) || 7)}
+                  onChange={(e) =>
+                    setDurationDays(parseInt(e.target.value) || 7)
+                  }
                   min={1}
                   max={30}
                   className="mt-1"
@@ -625,9 +654,13 @@ function RequestCard({
       </Avatar>
 
       <div className="flex-1 min-w-0">
-        <p className="font-semibold text-white truncate">{request.senderName}</p>
+        <p className="font-semibold text-white truncate">
+          {request.senderName}
+        </p>
         <div className="flex items-center gap-3 mt-0.5">
-          <span className="text-xs text-[#A1A1A1]">Level {request.senderLevel}</span>
+          <span className="text-xs text-[#A1A1A1]">
+            Level {request.senderLevel}
+          </span>
           <span className="flex items-center gap-1 text-xs text-[#FF7A00]">
             <Sparkles className="h-3 w-3" />
             {request.senderXp.toLocaleString()} XP
@@ -636,7 +669,12 @@ function RequestCard({
       </div>
 
       <div className="flex gap-2">
-        <Button size="icon" variant="outline" onClick={onReject} className="h-8 w-8">
+        <Button
+          size="icon"
+          variant="outline"
+          onClick={onReject}
+          className="h-8 w-8"
+        >
           <X className="h-4 w-4" />
         </Button>
         <Button size="icon" onClick={onAccept} className="h-8 w-8">
@@ -673,7 +711,12 @@ function PendingChallengeCard({
           </p>
         </div>
         <div className="flex gap-2">
-          <Button size="icon" variant="outline" onClick={onReject} className="h-8 w-8">
+          <Button
+            size="icon"
+            variant="outline"
+            onClick={onReject}
+            className="h-8 w-8"
+          >
             <X className="h-4 w-4" />
           </Button>
           <Button size="icon" onClick={onAccept} className="h-8 w-8">
@@ -697,7 +740,8 @@ function ChallengeCard({ challenge }: { challenge: UserChallenge }) {
   );
 
   const isCompleted = challenge.status === "COMPLETED";
-  const isWinner = challenge.winnerId && challenge.winnerId !== challenge.opponent.id;
+  const isWinner =
+    challenge.winnerId && challenge.winnerId !== challenge.opponent.id;
 
   return (
     <div

@@ -1,11 +1,10 @@
 import { NextResponse } from "next/server";
 import { authenticateRequest } from "@/lib/api-auth";
 import {
-  getWeeklyRanking,
+  getGlobalRanking,
   getUserRankingPosition,
 } from "@/services/ranking.service";
 import { calculateLevel } from "@/services/xp.service";
-import { prisma } from "@/lib/prisma";
 
 export async function GET(request: Request) {
   try {
@@ -13,24 +12,15 @@ export async function GET(request: Request) {
     if (auth instanceof NextResponse) return auth;
 
     const [ranking, userPosition] = await Promise.all([
-      getWeeklyRanking(10),
+      getGlobalRanking(10),
       getUserRankingPosition(auth.userId),
     ]);
 
-    // Enrich ranking entries with level
-    const enriched = await Promise.all(
-      ranking.map(async (entry) => {
-        const user = await prisma.user.findUnique({
-          where: { id: entry.userId },
-          select: { xp: true },
-        });
-        return {
-          ...entry,
-          level: user ? calculateLevel(user.xp) : 0,
-          isCurrentUser: entry.userId === auth.userId,
-        };
-      }),
-    );
+    const enriched = ranking.map((entry) => ({
+      ...entry,
+      level: entry.isPlaceholder ? 0 : calculateLevel(entry.xpEarned),
+      isCurrentUser: !entry.isPlaceholder && entry.userId === auth.userId,
+    }));
 
     return NextResponse.json({
       ranking: enriched,

@@ -1,8 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import {
   startOfDay,
-  isSameDay,
-  isYesterday,
   getDayOfWeekInAppTimeZone,
   getLogicalDateString,
 } from "@/lib/date";
@@ -14,98 +12,128 @@ export interface StreakResult {
 }
 
 /**
- * Updates the user's streak after a habit completion.
+ * Recalculates the user's streak from real completion data.
  *
- * IMPORTANT: The streak only maintains/increments if the user
- * completed ALL scheduled habits for that day.
- *
- * - If the user already completed a habit today → check if all scheduled done
- * - If the last completion was yesterday → check if all were completed yesterday, then increment
- * - Otherwise → reset streak to 1 (or 0 if not all habits are done today)
+ * Rule:
+ * - A day counts only if all scheduled habits for that day were completed.
+ * - If a scheduled day is missed, streak breaks immediately.
+ * - Days with no scheduled habits are ignored.
  */
 export async function updateStreak(userId: string): Promise<StreakResult> {
   const now = new Date();
   const todayStart = startOfDay(now);
-  const dayOfWeek = getDayOfWeekInAppTimeZone(now);
   const todayString = getLogicalDateString(now);
 
-  console.log(
-    `[StreakService] updateStreak: userId=${userId}, ` +
-    `today=${todayString}, dayOfWeek=${dayOfWeek}`,
-  );
+  const [user, activeHabits, latestCompletion] = await Promise.all([
+    prisma.user.findUniqueOrThrow({
+      where: { id: userId },
+      select: { streak: true },
+    }),
+    prisma.habit.findMany({
+      where: { userId, isActive: true },
+      select: { id: true, daysOfWeek: true, createdAt: true },
+    }),
+    prisma.habitCompletion.findFirst({
+      where: { userId },
+      orderBy: { completionDate: "desc" },
+      select: { completedAt: true },
+    }),
+  ]);
 
-  const user = await prisma.user.findUniqueOrThrow({
-    where: { id: userId },
-    select: { streak: true, lastCompletionDate: true },
-  });
-
-  // Get scheduled habits for today
-  const scheduledHabits = await prisma.habit.findMany({
-    where: {
-      userId,
-      isActive: true,
-      daysOfWeek: { has: dayOfWeek },
-    },
-    select: { id: true, title: true },
-  });
-
-  // Get completions for today
-  const todayCompletions = await prisma.habitCompletion.findMany({
-    where: {
-      userId,
-      completionDate: todayStart,
-    },
-    select: { habitId: true },
-  });
-
-  const scheduledIds = new Set(scheduledHabits.map((h) => h.id));
-  const completedIds = new Set(todayCompletions.map((c) => c.habitId));
-  const allScheduledCompleted =
-    scheduledHabits.length > 0 &&
-    scheduledHabits.every((h) => completedIds.has(h.id));
-
-  console.log(
-    `[StreakService] Today: ${scheduledHabits.length} scheduled, ` +
-    `${todayCompletions.length} completed, allDone=${allScheduledCompleted}`,
-  );
-
-  const { lastCompletionDate } = user;
-
-  // If user already completed something today, just update lastCompletionDate
-  // The streak value depends on whether ALL habits are done
-  if (lastCompletionDate && isSameDay(lastCompletionDate, now)) {
-    // Already completed something today - streak already counted
-    // Just verify it should still be valid
-    console.log(`[StreakService] Already completed today, streak=${user.streak}`);
-    return { streak: user.streak, maintained: true, reset: false };
+  if (activeHabits.length === 0) {
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        streak: 0,
+        lastCompletionDate: latestCompletion?.completedAt ?? null,
+      },
+    });
+    return { streak: 0, maintained: false, reset: user.streak > 0 };
   }
 
-  // First completion of the day
-  let newStreak: number;
-  let reset = false;
+  const earliestHabitDate = activeHabits.reduce<Date>(
+    (min, habit) => (habit.createdAt < min ? habit.createdAt : min),
+    activeHabits[0].createdAt,
+  );
+  const earliestStart = startOfDay(earliestHabitDate);
 
-  if (lastCompletionDate && isYesterday(lastCompletionDate, now)) {
-    // Consecutive day - increment streak
-    newStreak = user.streak + 1;
-    console.log(
-      `[StreakService] Consecutive day! Streak ${user.streak} → ${newStreak}`,
+  const completions = await prisma.habitCompletion.findMany({
+    where: {
+      userId,
+      habitId: { in: activeHabits.map((h) => h.id) },
+      completionDate: {
+        gte: earliestStart,
+        lte: todayStart,
+      },
+    },
+    select: { habitId: true, completionDate: true },
+  });
+
+  const completionMap = new Map<string, Set<string>>();
+  for (const completion of completions) {
+    const day = getLogicalDateString(completion.completionDate);
+    const set = completionMap.get(day) ?? new Set<string>();
+    set.add(completion.habitId);
+    completionMap.set(day, set);
+  }
+
+  console.log(
+    `[StreakService] Recalculating streak user=${userId} today=${todayString} ` +
+      `habits=${activeHabits.length} completions=${completions.length}`,
+  );
+
+  const MS_PER_DAY = 24 * 60 * 60 * 1000;
+  const totalDays =
+    Math.floor((todayStart.getTime() - earliestStart.getTime()) / MS_PER_DAY) +
+    1;
+
+  let newStreak = 0;
+
+  for (let offset = 0; offset < totalDays; offset++) {
+    const dayDate = new Date(todayStart.getTime() - offset * MS_PER_DAY);
+    const dayString = getLogicalDateString(dayDate);
+    const dayOfWeek = getDayOfWeekInAppTimeZone(dayDate);
+
+    const scheduledHabits = activeHabits.filter(
+      (habit) =>
+        habit.daysOfWeek.includes(dayOfWeek) &&
+        getLogicalDateString(habit.createdAt) <= dayString,
     );
-  } else {
-    // Missed one or more days - reset
-    newStreak = 1;
-    reset = user.streak > 0;
-    console.log(
-      `[StreakService] Streak reset! ${user.streak} → 1 ` +
-      `(lastCompletion=${lastCompletionDate?.toISOString() || "none"})`,
+
+    if (scheduledHabits.length === 0) {
+      continue;
+    }
+
+    const completedSet = completionMap.get(dayString) ?? new Set<string>();
+    const allScheduledCompleted = scheduledHabits.every((habit) =>
+      completedSet.has(habit.id),
     );
+
+    console.log(
+      `[StreakService] Day=${dayString} scheduled=${scheduledHabits.length} ` +
+        `completed=${completedSet.size} allDone=${allScheduledCompleted}`,
+    );
+
+    if (!allScheduledCompleted) {
+      break;
+    }
+
+    newStreak++;
   }
 
   await prisma.user.update({
     where: { id: userId },
-    data: { streak: newStreak, lastCompletionDate: now },
+    data: {
+      streak: newStreak,
+      lastCompletionDate: latestCompletion?.completedAt ?? null,
+    },
   });
 
-  return { streak: newStreak, maintained: true, reset };
+  return {
+    streak: newStreak,
+    maintained: newStreak > 0,
+    reset: newStreak < user.streak,
+  };
 }
 
 /**

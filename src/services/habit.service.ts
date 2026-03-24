@@ -95,7 +95,7 @@ export async function getUserHabitsToday(
 
   console.log(
     `[HabitService] getUserHabitsToday: userId=${userId}, ` +
-    `todayStart=${todayStart.toISOString()}, dayOfWeek=${dayOfWeek}`,
+      `todayStart=${todayStart.toISOString()}, dayOfWeek=${dayOfWeek}`,
   );
 
   const habits = await prisma.habit.findMany({
@@ -172,7 +172,7 @@ export async function completeHabit(habitId: string, userId: string) {
 
   console.log(
     `[HabitService] completeHabit: habit="${habit.title}", ` +
-    `todayStart=${todayStart.toISOString()}, todayString=${todayString}`,
+      `todayStart=${todayStart.toISOString()}, todayString=${todayString}`,
   );
 
   // Check if already completed today
@@ -199,7 +199,7 @@ export async function completeHabit(habitId: string, userId: string) {
 
   console.log(
     `[HabitService] ✅ Habit "${habit.title}" completed by user ${userId} ` +
-    `(completionDate=${completion.completionDate.toISOString()})`,
+      `(completionDate=${completion.completionDate.toISOString()})`,
   );
 
   // Award XP & coins with logging
@@ -280,7 +280,7 @@ async function checkChallengeProgress(userId: string) {
 
   console.log(
     `[HabitService] checkChallengeProgress: user=${userId}, ` +
-    `scheduled=${todayHabits.length}, allCompleted=${allCompleted}`,
+      `scheduled=${todayHabits.length}, allCompleted=${allCompleted}`,
   );
 
   if (allCompleted && todayHabits.length > 0) {

@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
 import { useApi } from "@/hooks/use-api";
+import { dispatchUnreadCountUpdated } from "@/lib/notifications";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -64,6 +65,7 @@ export default function NotificationsPage() {
       try {
         const data = await get<NotificationData[]>("/api/notifications");
         setNotifications(data);
+        dispatchUnreadCountUpdated();
       } catch (err) {
         console.error("Fetch notifications error:", err);
       } finally {
@@ -77,10 +79,27 @@ export default function NotificationsPage() {
 
   const markAllRead = async () => {
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    dispatchUnreadCountUpdated();
     try {
       await patch("/api/notifications");
+      console.log("[Notifications] marked all as read");
+      dispatchUnreadCountUpdated();
     } catch (err) {
       console.error("Mark all read error:", err);
+    }
+  };
+
+  const markOneRead = async (notificationId: string) => {
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === notificationId ? { ...n, read: true } : n)),
+    );
+    dispatchUnreadCountUpdated();
+    try {
+      await patch("/api/notifications", { id: notificationId });
+      console.log(`[Notifications] marked one as read: ${notificationId}`);
+      dispatchUnreadCountUpdated();
+    } catch (err) {
+      console.error("Mark one read error:", err);
     }
   };
 
@@ -133,7 +152,10 @@ export default function NotificationsPage() {
             color: "#A1A1A1",
           };
           const Icon = config.icon;
-          const handleClick = () => {
+          const handleClick = async () => {
+            if (!notification.read) {
+              await markOneRead(notification.id);
+            }
             if (notification.link) {
               router.push(notification.link);
             }

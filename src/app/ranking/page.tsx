@@ -16,6 +16,7 @@ interface RankingEntry {
   xpEarned: number;
   level: number;
   isCurrentUser: boolean;
+  isPlaceholder?: boolean;
 }
 
 interface RankingData {
@@ -89,7 +90,7 @@ export default function RankingPage() {
 
   const { ranking, userPosition } = data;
   const top3 = ranking.slice(0, 3);
-  const rest = ranking.slice(3);
+  const rest = ranking.slice(3, 10);
 
   return (
     <div className="space-y-6">
@@ -97,16 +98,16 @@ export default function RankingPage() {
       <div>
         <h1 className="text-xl font-bold text-white flex items-center gap-2">
           <Medal className="h-5 w-5 text-[#FF7A00]" />
-          Weekly Ranking
+          Global Ranking
         </h1>
         <p className="text-sm text-[#A1A1A1]">
-          Top players this week based on XP earned
+          Top players of all time based on total XP
         </p>
       </div>
 
       {/* Podium — Top 3 */}
       {top3.length >= 3 && (
-        <div className="grid grid-cols-3 gap-3 items-end">
+        <div className="grid grid-cols-3 gap-2 sm:gap-3 items-end">
           <PodiumCard entry={top3[1]} />
           <PodiumCard entry={top3[0]} isFirst />
           <PodiumCard entry={top3[2]} />
@@ -125,32 +126,27 @@ export default function RankingPage() {
               <span className="text-[#FF7A00]">#{userPosition.position}</span>
             </p>
             <p className="text-xs text-[#A1A1A1]">
-              {userPosition.xpEarned.toLocaleString()} XP earned this week
+              {userPosition.xpEarned.toLocaleString()} total XP
             </p>
           </div>
         </div>
       )}
 
-      {/* Empty state */}
-      {ranking.length === 0 && (
-        <div className="rounded-2xl border border-white/[0.06] bg-[#121212] p-12 text-center">
-          <p className="text-[#A1A1A1] text-sm">
-            No ranking data yet. Start completing habits to climb the
-            leaderboard!
-          </p>
-        </div>
-      )}
-
-      {/* Remaining rankings */}
+      {/* Positions 4-10 */}
       {rest.length > 0 && (
-        <div className="rounded-2xl border border-white/[0.06] bg-[#121212] overflow-hidden">
+        <div className="rounded-2xl border border-white/[0.06] bg-[#121212] overflow-hidden max-h-[420px] overflow-y-auto">
           {rest.map((entry, i) => (
             <div
               key={entry.position}
               className={cn(
-                "flex items-center gap-4 px-4 py-3.5 border-b border-white/[0.04] last:border-0 transition-colors animate-slide-up",
-                entry.isCurrentUser
-                  ? "bg-[#FF7A00]/[0.06]"
+                "flex items-center gap-4 px-4 py-3.5 border-b border-white/[0.04] last:border-0 transition-colors animate-slide-up min-h-[70px]",
+                entry.isPlaceholder
+                  ? "opacity-60"
+                  : entry.isCurrentUser
+                    ? "bg-[#FF7A00]/[0.06]"
+                    : "hover:bg-white/[0.02]",
+                entry.isCurrentUser && !entry.isPlaceholder
+                  ? "ring-1 ring-inset ring-[#FF7A00]/20"
                   : "hover:bg-white/[0.02]",
               )}
               style={{ animationDelay: `${i * 50}ms` }}
@@ -159,40 +155,54 @@ export default function RankingPage() {
               <span
                 className={cn(
                   "w-8 text-center text-sm font-bold",
-                  entry.isCurrentUser ? "text-[#FF7A00]" : "text-[#A1A1A1]",
+                  entry.isPlaceholder
+                    ? "text-[#6B7280]"
+                    : entry.isCurrentUser
+                      ? "text-[#FF7A00]"
+                      : "text-[#A1A1A1]",
                 )}
               >
                 {entry.position}
               </span>
 
               {/* Avatar */}
-              <Avatar
-                className={cn(
-                  "h-10 w-10",
-                  entry.isCurrentUser && "ring-2 ring-[#FF7A00]/40",
-                )}
-              >
-                <AvatarFallback className="text-xs">
-                  {getInitials(entry.name)}
-                </AvatarFallback>
-              </Avatar>
+              {entry.isPlaceholder ? (
+                <div className="h-10 w-10 rounded-full bg-[#1A1A1A] border border-white/[0.06]" />
+              ) : (
+                <Avatar
+                  className={cn(
+                    "h-10 w-10",
+                    entry.isCurrentUser && "ring-2 ring-[#FF7A00]/40",
+                  )}
+                >
+                  <AvatarFallback className="text-xs">
+                    {getInitials(entry.name)}
+                  </AvatarFallback>
+                </Avatar>
+              )}
 
               {/* Info */}
               <div className="flex-1 min-w-0">
                 <p
                   className={cn(
                     "text-sm font-semibold truncate",
-                    entry.isCurrentUser ? "text-[#FF7A00]" : "text-white",
+                    entry.isPlaceholder
+                      ? "text-[#9CA3AF]"
+                      : entry.isCurrentUser
+                        ? "text-[#FF7A00]"
+                        : "text-white",
                   )}
                 >
-                  {entry.name}
-                  {entry.isCurrentUser && (
+                  {entry.isPlaceholder ? "No player yet" : entry.name}
+                  {entry.isCurrentUser && !entry.isPlaceholder && (
                     <span className="text-[#A1A1A1] font-normal ml-1">
-                      (you)
+                      (You)
                     </span>
                   )}
                 </p>
-                <p className="text-xs text-[#A1A1A1]">Level {entry.level}</p>
+                <p className="text-xs text-[#A1A1A1]">
+                  {entry.isPlaceholder ? "Empty slot" : `Level ${entry.level}`}
+                </p>
               </div>
 
               {/* XP */}
@@ -200,7 +210,9 @@ export default function RankingPage() {
                 <p className="text-sm font-bold text-[#FF7A00]">
                   {entry.xpEarned.toLocaleString()}
                 </p>
-                <p className="text-[10px] text-[#A1A1A1]">XP</p>
+                <p className="text-[10px] text-[#A1A1A1]">
+                  {entry.isPlaceholder ? "" : "XP"}
+                </p>
               </div>
             </div>
           ))}
@@ -224,19 +236,21 @@ function PodiumCard({
     <div
       className={cn(
         "flex flex-col items-center rounded-2xl border p-4 transition-all animate-slide-up",
-        colors.bg,
-        colors.border,
+        entry.isPlaceholder ? "bg-[#111111] border-white/[0.06] opacity-60" : colors.bg,
+        entry.isPlaceholder ? "" : colors.border,
         isFirst ? "py-6" : "py-4",
       )}
     >
-      {isFirst && (
+      {isFirst && !entry.isPlaceholder && (
         <Crown className="h-6 w-6 text-[#FFD700] mb-2 animate-glow-pulse" />
       )}
 
       <div
         className={cn(
           "flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold mb-2",
-          pos === 1
+          entry.isPlaceholder
+            ? "bg-white/[0.06] text-[#9CA3AF]"
+            : pos === 1
             ? "bg-[#FFD700]/20 text-[#FFD700]"
             : pos === 2
               ? "bg-[#C0C0C0]/20 text-[#C0C0C0]"
@@ -246,31 +260,51 @@ function PodiumCard({
         {pos}
       </div>
 
-      <Avatar
-        className={cn(
-          "ring-2 shadow-lg mb-2",
-          colors.ring,
-          colors.shadow,
-          isFirst ? "h-16 w-16" : "h-12 w-12",
-        )}
-      >
-        <AvatarFallback className={cn("text-sm", isFirst && "text-lg")}>
-          {getInitials(entry.name)}
-        </AvatarFallback>
-      </Avatar>
+      {entry.isPlaceholder ? (
+        <div
+          className={cn(
+            "mb-2 rounded-full bg-[#1A1A1A] border border-white/[0.06]",
+            isFirst ? "h-16 w-16" : "h-12 w-12",
+          )}
+        />
+      ) : (
+        <Avatar
+          className={cn(
+            "ring-2 shadow-lg mb-2",
+            colors.ring,
+            colors.shadow,
+            isFirst ? "h-16 w-16" : "h-12 w-12",
+          )}
+        >
+          <AvatarFallback className={cn("text-sm", isFirst && "text-lg")}>
+            {getInitials(entry.name)}
+          </AvatarFallback>
+        </Avatar>
+      )}
 
       <p
         className={cn(
           "font-semibold text-white text-center truncate w-full",
+          entry.isPlaceholder && "text-[#9CA3AF]",
           isFirst ? "text-sm" : "text-xs",
         )}
       >
-        {entry.name}
+        {entry.isPlaceholder ? "No player yet" : entry.name}
       </p>
 
       <div className="flex items-center gap-1 mt-1">
-        <Sparkles className={cn("h-3 w-3", colors.text)} />
-        <span className={cn("text-xs font-bold", colors.text)}>
+        <Sparkles
+          className={cn(
+            "h-3 w-3",
+            entry.isPlaceholder ? "text-[#6B7280]" : colors.text,
+          )}
+        />
+        <span
+          className={cn(
+            "text-xs font-bold",
+            entry.isPlaceholder ? "text-[#9CA3AF]" : colors.text,
+          )}
+        >
           {entry.xpEarned.toLocaleString()}
         </span>
       </div>

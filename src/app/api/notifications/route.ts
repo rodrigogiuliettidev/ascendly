@@ -28,10 +28,30 @@ export async function PATCH(request: Request) {
     const auth = authenticateRequest(request);
     if (auth instanceof NextResponse) return auth;
 
+    const body = await request.json().catch(() => ({}));
+    const notificationId =
+      typeof body?.id === "string" && body.id.trim().length > 0
+        ? body.id
+        : null;
+
+    if (notificationId) {
+      await prisma.notification.updateMany({
+        where: { id: notificationId, userId: auth.userId, read: false },
+        data: { read: true },
+      });
+      console.log(
+        `[API] /api/notifications mark-one-read user=${auth.userId} id=${notificationId}`,
+      );
+      return NextResponse.json({ success: true });
+    }
+
     await prisma.notification.updateMany({
       where: { userId: auth.userId, read: false },
       data: { read: true },
     });
+    console.log(
+      `[API] /api/notifications mark-all-read user=${auth.userId}`,
+    );
 
     return NextResponse.json({ success: true });
   } catch (error) {

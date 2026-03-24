@@ -288,8 +288,10 @@ export async function getRelationshipStatus(
  * Search users by name or email
  */
 export async function searchUsers(query: string, currentUserId: string) {
-  console.log(`[Social] searchUsers: query="${query}", currentUserId="${currentUserId}"`);
-  
+  console.log(
+    `[Social] searchUsers: query="${query}", currentUserId="${currentUserId}"`,
+  );
+
   if (!query || query.length < 2) {
     console.log("[Social] searchUsers: query too short, returning empty");
     return [];

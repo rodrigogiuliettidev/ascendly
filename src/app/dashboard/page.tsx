@@ -60,6 +60,7 @@ interface RankingEntry {
   xpEarned: number;
   level: number;
   isCurrentUser: boolean;
+  isPlaceholder?: boolean;
 }
 
 interface AchievementData {
@@ -505,7 +506,7 @@ export default function DashboardPage() {
             <div className="flex items-center justify-between">
               <h2 className="text-base font-semibold text-white flex items-center gap-2">
                 <Trophy className="h-4 w-4 text-[#FF9F3F]" />
-                Weekly Ranking
+                Global Ranking
               </h2>
               <Link
                 href="/ranking"
@@ -524,7 +525,9 @@ export default function DashboardPage() {
                   <div
                     key={entry.position}
                     className={`flex items-center gap-3 px-4 py-3 border-b border-white/[0.04] last:border-0 transition-colors ${
-                      entry.isCurrentUser
+                      entry.isPlaceholder
+                        ? "opacity-60"
+                        : entry.isCurrentUser
                         ? "bg-[#FF7A00]/[0.06]"
                         : "hover:bg-white/[0.02]"
                     }`}
@@ -550,16 +553,20 @@ export default function DashboardPage() {
                     </span>
                     <Avatar className="h-8 w-8">
                       <AvatarFallback className="text-[10px]">
-                        {getInitials(entry.name)}
+                        {entry.isPlaceholder ? "—" : getInitials(entry.name)}
                       </AvatarFallback>
                     </Avatar>
                     <span
                       className={`flex-1 text-sm font-medium truncate ${
-                        entry.isCurrentUser ? "text-[#FF7A00]" : "text-white"
+                        entry.isPlaceholder
+                          ? "text-[#9CA3AF]"
+                          : entry.isCurrentUser
+                            ? "text-[#FF7A00]"
+                            : "text-white"
                       }`}
                     >
-                      {entry.name}
-                      {entry.isCurrentUser && (
+                      {entry.isPlaceholder ? "No player yet" : entry.name}
+                      {entry.isCurrentUser && !entry.isPlaceholder && (
                         <span className="text-[#A1A1A1] text-xs ml-1">
                           (you)
                         </span>

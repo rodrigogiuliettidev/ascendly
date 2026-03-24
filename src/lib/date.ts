@@ -128,8 +128,8 @@ export function startOfDay(date: Date = new Date()): Date {
   const result = zonedMidnightToUtc(p.year, p.month, p.day);
   console.log(
     `[Date] startOfDay: input=${date.toISOString()}, ` +
-    `appTZ=${p.year}-${p.month}-${p.day} (${p.weekday}), ` +
-    `result=${result.toISOString()}`,
+      `appTZ=${p.year}-${p.month}-${p.day} (${p.weekday}), ` +
+      `result=${result.toISOString()}`,
   );
   return result;
 }
@@ -180,7 +180,7 @@ export function getDayOfWeekInAppTimeZone(date: Date = new Date()): number {
   const result = getZonedParts(date).weekdayIndex;
   console.log(
     `[Date] getDayOfWeekInAppTimeZone: input=${date.toISOString()}, ` +
-    `dayOfWeek=${result} (${["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][result]})`,
+      `dayOfWeek=${result} (${["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][result]})`,
   );
   return result;
 }

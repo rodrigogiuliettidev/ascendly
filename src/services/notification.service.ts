@@ -170,15 +170,15 @@ export async function notifyAchievementUnlocked(
 export async function notifyRankingUpdate(userId: string, position: number) {
   const message =
     position <= 10
-      ? `You entered the Top 10! You're now ranked #${position} this week. 🔥`
-      : `Ranking update: You moved to position #${position} this week.`;
+      ? `You entered the Top 10! You're now ranked #${position} globally. 🔥`
+      : `Ranking update: You moved to position #${position} globally.`;
 
   await sendNotification(userId, "RANKING_UPDATE", message, "/ranking", {
     title: position <= 10 ? "You entered the Top 10!" : "Ranking update",
     body:
       position <= 10
-        ? `You are now ranked #${position} this week.`
-        : `You moved to position #${position} this week.`,
+        ? `You are now ranked #${position} globally.`
+        : `You moved to position #${position} globally.`,
     url: "/ranking",
     tag: "ranking",
   });

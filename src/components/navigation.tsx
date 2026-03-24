@@ -15,6 +15,10 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
+import { useApi } from "@/hooks/use-api";
+import {
+  UNREAD_COUNT_UPDATED_EVENT,
+} from "@/lib/notifications";
 
 const bottomNavItems = [
   { href: "/ranking", label: "Ranking", icon: Trophy },
@@ -35,7 +39,50 @@ function getInitials(name: string): string {
 
 export function TopBar() {
   const { user } = useAuth();
+  const { get } = useApi();
   const userInitials = user?.name ? getInitials(user.name) : "";
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    if (!user) {
+      setUnreadCount(0);
+      return;
+    }
+
+    let mounted = true;
+
+    const fetchUnreadCount = async () => {
+      try {
+        const response = await get<{ count: number }>(
+          "/api/notifications/unread-count",
+        );
+        if (!mounted) return;
+        setUnreadCount(response.count);
+        console.log(
+          `[TopBar] unread count fetched: ${response.count}`,
+        );
+      } catch (error) {
+        console.error("[TopBar] fetch unread count error:", error);
+      }
+    };
+
+    fetchUnreadCount();
+
+    const onUnreadCountUpdated = () => {
+      fetchUnreadCount();
+    };
+
+    window.addEventListener(UNREAD_COUNT_UPDATED_EVENT, onUnreadCountUpdated);
+    return () => {
+      mounted = false;
+      window.removeEventListener(
+        UNREAD_COUNT_UPDATED_EVENT,
+        onUnreadCountUpdated,
+      );
+    };
+  }, [user, get]);
+
+  const badgeLabel = unreadCount > 99 ? "99+" : String(unreadCount);
 
   return (
     <header className="sticky top-0 z-40 border-b border-white/[0.06] bg-[#0B0B0B]/80 backdrop-blur-xl">
@@ -57,9 +104,11 @@ export function TopBar() {
             className="relative flex h-9 w-9 items-center justify-center rounded-xl transition-colors hover:bg-white/5"
           >
             <Bell className="h-5 w-5 text-[#A1A1A1]" />
-            <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#FF7A00] text-[9px] font-bold text-white">
-              3
-            </span>
+            {unreadCount > 0 && (
+              <span className="absolute -top-1.5 -right-1.5 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[#FF7A00] px-1 text-[9px] font-bold text-white">
+                {badgeLabel}
+              </span>
+            )}
           </Link>
           <Link href="/profile">
             <Avatar className="h-8 w-8 ring-2 ring-[#FF7A00]/30">

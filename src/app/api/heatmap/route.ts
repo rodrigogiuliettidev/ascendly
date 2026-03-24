@@ -22,9 +22,7 @@ export async function GET(request: Request) {
       select: { completionDate: true, completedAt: true },
     });
 
-    console.log(
-      `[Heatmap] Found ${completions.length} raw completions`,
-    );
+    console.log(`[Heatmap] Found ${completions.length} raw completions`);
 
     // Debug: log some completion dates
     if (completions.length > 0) {
@@ -32,8 +30,8 @@ export async function GET(request: Request) {
       sample.forEach((c) => {
         console.log(
           `[Heatmap] Completion: completionDate=${c.completionDate.toISOString()}, ` +
-          `logical=${getLogicalDateString(c.completionDate)}, ` +
-          `completedAt=${c.completedAt.toISOString()}`,
+            `logical=${getLogicalDateString(c.completionDate)}, ` +
+            `completedAt=${c.completedAt.toISOString()}`,
         );
       });
     }
@@ -60,10 +58,7 @@ export async function GET(request: Request) {
     }
 
     // Debug: log last 7 days of result
-    console.log(
-      `[Heatmap] Returning last 7 days:`,
-      result.slice(-7),
-    );
+    console.log(`[Heatmap] Returning last 7 days:`, result.slice(-7));
 
     return NextResponse.json(result);
   } catch (error) {
