@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { authenticateRequest } from "@/lib/api-auth";
 import { prisma } from "@/lib/prisma";
-import { getLogicalDateString, getDaysAgo } from "@/lib/date";
+import { getLogicalDateString, getDaysAgo, getDayOfWeekInAppTimeZone } from "@/lib/date";
+import { dayIndexToKey, resolveHabitSchedule } from "@/lib/habit-schedule";
 
 export async function GET(request: Request) {
   try {
@@ -14,50 +15,60 @@ export async function GET(request: Request) {
       `[Heatmap] Fetching completions for user=${auth.userId} since ${ninetyDaysAgo.toISOString()}`,
     );
 
-    const completions = await prisma.habitCompletion.findMany({
-      where: {
-        userId: auth.userId,
-        completionDate: { gte: ninetyDaysAgo },
-      },
-      select: { completionDate: true, completedAt: true },
-    });
+    const [activeHabits, completions] = await Promise.all([
+      prisma.habit.findMany({
+        where: {
+          userId: auth.userId,
+          isActive: true,
+        },
+        select: {
+          id: true,
+          schedule: true,
+          daysOfWeek: true,
+        },
+      }),
+      prisma.habitCompletion.findMany({
+        where: {
+          userId: auth.userId,
+          completionDate: { gte: ninetyDaysAgo },
+        },
+        select: { completionDate: true, completedAt: true, habitId: true },
+      }),
+    ]);
 
     console.log(`[Heatmap] Found ${completions.length} raw completions`);
 
-    // Debug: log some completion dates
-    if (completions.length > 0) {
-      const sample = completions.slice(-5);
-      sample.forEach((c) => {
-        console.log(
-          `[Heatmap] Completion: completionDate=${c.completionDate.toISOString()}, ` +
-            `logical=${getLogicalDateString(c.completionDate)}, ` +
-            `completedAt=${c.completedAt.toISOString()}`,
-        );
-      });
-    }
-
-    // Group by logical date string
-    const countMap = new Map<string, number>();
+    const completionMap = new Map<string, number>();
     for (const c of completions) {
       const dateStr = getLogicalDateString(c.completionDate);
-      countMap.set(dateStr, (countMap.get(dateStr) || 0) + 1);
+      completionMap.set(dateStr, (completionMap.get(dateStr) || 0) + 1);
     }
 
-    // Debug: log grouped data
-    console.log(
-      `[Heatmap] Grouped into ${countMap.size} unique dates:`,
-      Array.from(countMap.entries()).slice(-7),
+    const habitSchedules = activeHabits.map((habit) =>
+      resolveHabitSchedule(habit.schedule, habit.daysOfWeek),
     );
 
-    // Build result array for the last 90 days
     const result = [];
     for (let i = 89; i >= 0; i--) {
       const d = getDaysAgo(i);
       const dateStr = getLogicalDateString(d);
-      result.push({ date: dateStr, count: countMap.get(dateStr) || 0 });
+      const dayIndex = getDayOfWeekInAppTimeZone(d);
+      const dayKey = dayIndexToKey(dayIndex);
+      const expected = habitSchedules.filter((schedule) =>
+        schedule.includes(dayKey),
+      ).length;
+      const completed = completionMap.get(dateStr) || 0;
+      const intensity =
+        expected > 0 ? Math.round((Math.min(completed, expected) / expected) * 4) : 0;
+
+      result.push({
+        date: dateStr,
+        count: expected > 0 ? intensity : 0,
+        completed,
+        expected,
+      });
     }
 
-    // Debug: log last 7 days of result
     console.log(`[Heatmap] Returning last 7 days:`, result.slice(-7));
 
     return NextResponse.json(result);

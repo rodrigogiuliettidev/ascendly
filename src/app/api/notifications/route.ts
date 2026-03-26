@@ -49,9 +49,7 @@ export async function PATCH(request: Request) {
       where: { userId: auth.userId, read: false },
       data: { read: true },
     });
-    console.log(
-      `[API] /api/notifications mark-all-read user=${auth.userId}`,
-    );
+    console.log(`[API] /api/notifications mark-all-read user=${auth.userId}`);
 
     return NextResponse.json({ success: true });
   } catch (error) {

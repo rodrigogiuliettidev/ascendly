@@ -50,6 +50,7 @@ export type CreateHabitInput = {
   penaltyXp?: number;
   reminderTime?: string;
   daysOfWeek?: number[];
+  schedule?: string[];
 };
 
 export type UpdateHabitInput = Partial<CreateHabitInput> & {
@@ -99,6 +100,15 @@ export type HabitWithCompletion = Habit & {
   scheduledToday: boolean;
 };
 
+export type HabitScheduleDay =
+  | "sun"
+  | "mon"
+  | "tue"
+  | "wed"
+  | "thu"
+  | "fri"
+  | "sat";
+
 export type MissionWithDetails = UserMission & {
   mission: Mission;
 };
@@ -124,6 +134,8 @@ export type WeeklyProgress = {
 export type ChallengeProgress = {
   currentDay: number;
   totalDays: number;
+  monthCurrentDay: number;
+  monthTotalDays: number;
   startDate: Date;
   isActive: boolean;
   habitsCompletedToday: number;

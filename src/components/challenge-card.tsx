@@ -6,6 +6,8 @@ import { cn } from "@/lib/utils";
 interface ChallengeCardProps {
   currentDay: number;
   totalDays: number;
+  monthCurrentDay: number;
+  monthTotalDays: number;
   habitsCompletedToday: number;
   totalHabitsToday: number;
   daysRemaining: number;
@@ -15,12 +17,14 @@ interface ChallengeCardProps {
 export function ChallengeCard({
   currentDay,
   totalDays,
+  monthCurrentDay,
+  monthTotalDays,
   habitsCompletedToday,
   totalHabitsToday,
   daysRemaining,
   isActive,
 }: ChallengeCardProps) {
-  const progress = (currentDay / totalDays) * 100;
+  const progress = (monthCurrentDay / monthTotalDays) * 100;
   const todayProgress =
     totalHabitsToday > 0 ? (habitsCompletedToday / totalHabitsToday) * 100 : 0;
   const allCompleted =
@@ -81,8 +85,8 @@ export function ChallengeCard({
           </svg>
           {/* Center content */}
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className="text-2xl font-bold text-white">{currentDay}</span>
-            <span className="text-[10px] text-[#A1A1A1]">of {totalDays}</span>
+            <span className="text-2xl font-bold text-white">{monthCurrentDay}</span>
+            <span className="text-[10px] text-[#A1A1A1]">of {monthTotalDays}</span>
           </div>
         </div>
 
@@ -91,12 +95,15 @@ export function ChallengeCard({
           <div>
             <h3 className="text-sm font-semibold text-white flex items-center gap-2">
               <Flame className="h-4 w-4 text-[#FF7A00]" />
-              30-Day Challenge
+              Monthly Challenge
             </h3>
             <p className="text-[11px] text-[#A1A1A1] mt-0.5">
               {isActive
                 ? `${daysRemaining} days remaining`
                 : "Challenge completed! 🎉"}
+            </p>
+            <p className="text-[10px] text-[#A1A1A1] mt-1">
+              Challenge day: {currentDay}/{totalDays}
             </p>
           </div>
 

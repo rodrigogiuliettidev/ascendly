@@ -16,9 +16,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
 import { useApi } from "@/hooks/use-api";
-import {
-  UNREAD_COUNT_UPDATED_EVENT,
-} from "@/lib/notifications";
+import { UNREAD_COUNT_UPDATED_EVENT } from "@/lib/notifications";
 
 const bottomNavItems = [
   { href: "/ranking", label: "Ranking", icon: Trophy },
@@ -58,9 +56,7 @@ export function TopBar() {
         );
         if (!mounted) return;
         setUnreadCount(response.count);
-        console.log(
-          `[TopBar] unread count fetched: ${response.count}`,
-        );
+        console.log(`[TopBar] unread count fetched: ${response.count}`);
       } catch (error) {
         console.error("[TopBar] fetch unread count error:", error);
       }
@@ -177,7 +173,7 @@ export function MobileNav() {
                   {/* Active background glow */}
                   {isActive && (
                     <>
-                      <div className="absolute inset-0 rounded-2xl bg-[#FF7A00]/10" />
+                      <div className="absolute inset-0 rounded-2xl" />
                       <div className="absolute inset-0 rounded-2xl bg-[#FF7A00]/5 blur-md" />
                     </>
                   )}
@@ -201,9 +197,9 @@ export function MobileNav() {
                     />
 
                     {/* Active dot indicator with glow */}
-                    {isActive && (
+                    {/* {isActive && (
                       <span className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 h-1.5 w-1.5 rounded-full bg-[#FF7A00] shadow-[0_0_8px_3px_rgba(255,122,0,0.6)]" />
-                    )}
+                    )} */}
                   </div>
 
                   {/* Label */}

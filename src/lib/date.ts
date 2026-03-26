@@ -227,3 +227,19 @@ export function getDateRange(startDate: Date, endDate: Date): string[] {
 
   return dates;
 }
+
+/**
+ * Returns current day index in month and total days in current month
+ * using APP_TIMEZONE.
+ */
+export function getMonthProgress(date: Date = new Date()): {
+  currentDay: number;
+  totalDays: number;
+} {
+  const p = getZonedParts(date);
+  const totalDays = new Date(Date.UTC(p.year, p.month, 0)).getUTCDate();
+  return {
+    currentDay: p.day,
+    totalDays,
+  };
+}

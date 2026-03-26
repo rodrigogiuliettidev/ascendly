@@ -5,6 +5,12 @@ import {
   getDayOfWeekInAppTimeZone,
   getLogicalDateString,
 } from "@/lib/date";
+import {
+  dayIndexToKey,
+  normalizeSchedule,
+  scheduleToDaysOfWeek,
+  resolveHabitSchedule,
+} from "@/lib/habit-schedule";
 import { awardXP, awardCoins } from "./xp.service";
 import { updateStreak } from "./streak.service";
 import { updateMissionsOnHabitComplete } from "./mission.service";
@@ -39,6 +45,11 @@ function parseReminderTime(reminderTime?: string): number | null | undefined {
  * Creates a new habit for a user.
  */
 export async function createHabit(userId: string, input: CreateHabitInput) {
+  const schedule = normalizeSchedule(
+    input.schedule ??
+      (input.daysOfWeek ? input.daysOfWeek.map((d) => dayIndexToKey(d)) : []),
+  );
+
   return prisma.habit.create({
     data: {
       userId,
@@ -48,7 +59,8 @@ export async function createHabit(userId: string, input: CreateHabitInput) {
       coinReward: input.coinReward ?? 10,
       penaltyXp: input.penaltyXp ?? 5,
       reminderTime: parseReminderTime(input.reminderTime),
-      daysOfWeek: input.daysOfWeek ?? [0, 1, 2, 3, 4, 5, 6],
+      schedule,
+      daysOfWeek: scheduleToDaysOfWeek(schedule),
     },
   });
 }
@@ -63,12 +75,28 @@ export async function updateHabit(
 ) {
   const reminderTime = parseReminderTime(input.reminderTime);
   const { reminderTime: _, ...rest } = input;
+  const existingHabit = await prisma.habit.findUniqueOrThrow({
+    where: { id: habitId, userId },
+    select: { schedule: true, daysOfWeek: true },
+  });
+
+  const shouldUpdateSchedule =
+    input.schedule !== undefined || input.daysOfWeek !== undefined;
+
+  const schedule = shouldUpdateSchedule
+    ? normalizeSchedule(
+        input.schedule ??
+          (input.daysOfWeek ? input.daysOfWeek.map((d) => dayIndexToKey(d)) : []),
+      )
+    : resolveHabitSchedule(existingHabit.schedule, existingHabit.daysOfWeek);
 
   return prisma.habit.update({
     where: { id: habitId, userId },
     data: {
       ...rest,
       reminderTime,
+      schedule,
+      daysOfWeek: scheduleToDaysOfWeek(schedule),
     },
   });
 }
@@ -98,8 +126,13 @@ export async function getUserHabitsToday(
       `todayStart=${todayStart.toISOString()}, dayOfWeek=${dayOfWeek}`,
   );
 
+  const todayKey = dayIndexToKey(dayOfWeek);
   const habits = await prisma.habit.findMany({
-    where: { userId, isActive: true },
+    where: {
+      userId,
+      isActive: true,
+      OR: [{ schedule: { has: todayKey } }, { daysOfWeek: { has: dayOfWeek } }],
+    },
     include: {
       completions: {
         where: { completionDate: todayStart },
@@ -110,9 +143,12 @@ export async function getUserHabitsToday(
   });
 
   return habits.map((habit) => {
-    const scheduledToday = habit.daysOfWeek.includes(dayOfWeek);
+    const schedule = resolveHabitSchedule(habit.schedule, habit.daysOfWeek);
+    const scheduledToday = schedule.includes(dayIndexToKey(dayOfWeek));
     return {
       ...habit,
+      schedule,
+      daysOfWeek: scheduleToDaysOfWeek(schedule),
       completedToday: habit.completions.length > 0,
       scheduledToday,
       completions: undefined as never,
@@ -151,8 +187,10 @@ export async function getAllHabits(userId: string) {
 
   return habits.map((habit) => ({
     ...habit,
+    schedule: resolveHabitSchedule(habit.schedule, habit.daysOfWeek),
     completedToday: habit.completions.length > 0,
-    scheduledToday: habit.daysOfWeek.includes(dayOfWeek),
+    scheduledToday: resolveHabitSchedule(habit.schedule, habit.daysOfWeek).includes(dayIndexToKey(dayOfWeek)),
+    daysOfWeek: scheduleToDaysOfWeek(resolveHabitSchedule(habit.schedule, habit.daysOfWeek)),
     completions: undefined as never,
   }));
 }
@@ -169,6 +207,12 @@ export async function completeHabit(habitId: string, userId: string) {
   const now = new Date();
   const todayStart = startOfDay(now);
   const todayString = getLogicalDateString(now);
+  const todayDayKey = dayIndexToKey(getDayOfWeekInAppTimeZone(now));
+  const habitSchedule = resolveHabitSchedule(habit.schedule, habit.daysOfWeek);
+
+  if (!habitSchedule.includes(todayDayKey)) {
+    throw new Error("Habit is not scheduled for today");
+  }
 
   console.log(
     `[HabitService] completeHabit: habit="${habit.title}", ` +
@@ -310,30 +354,39 @@ export async function getWeeklyProgress(
   userId: string,
 ): Promise<WeeklyProgress> {
   const weekStart = getWeekStart();
-  const dayOfWeek = getDayOfWeekInAppTimeZone();
+  const weekEnd = new Date(weekStart.getTime() + 7 * 24 * 60 * 60 * 1000);
 
   // Get all active habits
   const habits = await prisma.habit.findMany({
     where: { userId, isActive: true },
   });
 
-  // Calculate total possible completions this week (Sunday -> today)
-  let totalPossible = 0;
-  for (let day = 0; day <= dayOfWeek; day++) {
-    for (const habit of habits) {
-      if (habit.daysOfWeek.includes(day)) {
-        totalPossible++;
-      }
-    }
-  }
+  // Calculate total weekly scheduled habits for full current week (Sun-Sat)
+  const totalPossible = habits.reduce((sum, habit) => {
+    const schedule = resolveHabitSchedule(habit.schedule, habit.daysOfWeek);
+    return sum + schedule.length;
+  }, 0);
 
-  // Count completions this week
-  const completions = await prisma.habitCompletion.count({
+  // Count only completions that happened on a scheduled day for each habit
+  const completionRows = await prisma.habitCompletion.findMany({
     where: {
       userId,
-      completionDate: { gte: weekStart },
+      completionDate: { gte: weekStart, lt: weekEnd },
+    },
+    select: {
+      completionDate: true,
+      habit: { select: { schedule: true, daysOfWeek: true } },
     },
   });
+
+  let completions = 0;
+  for (const row of completionRows) {
+    const completionDay = getDayOfWeekInAppTimeZone(row.completionDate);
+    const schedule = resolveHabitSchedule(row.habit.schedule, row.habit.daysOfWeek);
+    if (schedule.includes(dayIndexToKey(completionDay))) {
+      completions++;
+    }
+  }
 
   const percentage =
     totalPossible > 0 ? Math.round((completions / totalPossible) * 100) : 0;

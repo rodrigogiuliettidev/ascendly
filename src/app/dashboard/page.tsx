@@ -39,7 +39,9 @@ interface HabitData {
   description: string | null;
   xpReward: number;
   coinReward: number;
+  schedule?: string[];
   completedToday: boolean;
+  scheduledToday?: boolean;
 }
 
 interface MissionData {
@@ -75,6 +77,8 @@ interface AchievementData {
 interface ChallengeData {
   currentDay: number;
   totalDays: number;
+  monthCurrentDay: number;
+  monthTotalDays: number;
   habitsCompletedToday: number;
   totalHabitsToday: number;
   daysRemaining: number;
@@ -114,6 +118,14 @@ function getInitials(name: string) {
     .slice(0, 2);
 }
 
+function getClientLocalDateKey() {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
 // ─── Page ────────────────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
@@ -144,6 +156,7 @@ export default function DashboardPage() {
     coins: number;
     show: boolean;
   }>({ xp: 0, coins: 0, show: false });
+  const [localDateKey, setLocalDateKey] = useState(getClientLocalDateKey());
 
   // Fetch all dashboard data
   useEffect(() => {
@@ -170,7 +183,9 @@ export default function DashboardPage() {
             userPosition: { position: number; xpEarned: number } | null;
           }>("/api/ranking"),
           get<AchievementData[]>("/api/achievements"),
-          get<{ date: string; count: number }[]>("/api/heatmap"),
+          get<
+            { date: string; count: number; completed?: number; expected?: number }[]
+          >("/api/heatmap"),
           get<ChallengeData>("/api/challenge"),
           get<XpSummaryData>("/api/xp"),
           get<{ habits: WeeklyHabitData[] }>("/api/habits/weekly"),
@@ -213,6 +228,44 @@ export default function DashboardPage() {
     fetchData();
   }, [user, get]);
 
+  useEffect(() => {
+    if (!user) return;
+
+    const refreshTimeBasedData = async () => {
+      try {
+        const [habitsRes, challengeRes, weeklyProgressRes, weeklyHabitsRes] =
+          await Promise.allSettled([
+            get<HabitData[]>("/api/habits"),
+            get<ChallengeData>("/api/challenge"),
+            get<WeeklyProgressData>("/api/habits/weekly-progress"),
+            get<{ habits: WeeklyHabitData[] }>("/api/habits/weekly"),
+          ]);
+
+        if (habitsRes.status === "fulfilled") setHabits(habitsRes.value);
+        if (challengeRes.status === "fulfilled") setChallenge(challengeRes.value);
+        if (weeklyProgressRes.status === "fulfilled") {
+          setWeeklyProgress(weeklyProgressRes.value);
+        }
+        if (weeklyHabitsRes.status === "fulfilled") {
+          setWeeklyHabits(weeklyHabitsRes.value.habits);
+        }
+      } catch (error) {
+        console.error("[Dashboard] Midnight refresh failed:", error);
+      }
+    };
+
+    const interval = window.setInterval(() => {
+      const nowKey = getClientLocalDateKey();
+      if (nowKey !== localDateKey) {
+        setLocalDateKey(nowKey);
+        refreshUser().catch(console.error);
+        refreshTimeBasedData().catch(console.error);
+      }
+    }, 60_000);
+
+    return () => window.clearInterval(interval);
+  }, [user, get, localDateKey, refreshUser]);
+
   const handleComplete = async (id: string) => {
     const habit = habits.find((h) => h.id === id);
     if (!habit || habit.completedToday) return;
@@ -247,7 +300,9 @@ export default function DashboardPage() {
       // Refresh heatmap
       try {
         const updatedHeatmap =
-          await get<{ date: string; count: number }[]>("/api/heatmap");
+          await get<
+            { date: string; count: number; completed?: number; expected?: number }[]
+          >("/api/heatmap");
         setHeatmapData(updatedHeatmap);
       } catch {
         /* ignore */
@@ -302,10 +357,11 @@ export default function DashboardPage() {
     return null;
   }
 
-  const completedCount = habits.filter((h) => h.completedToday).length;
+  const todaysHabits = habits.filter((h) => h.scheduledToday !== false);
+  const completedCount = todaysHabits.filter((h) => h.completedToday).length;
   const initials = getInitials(user.name);
   const rankingValue = userPosition ? `#${userPosition.position}` : "—";
-  const rankingSubtitle = userPosition ? "This week" : "No data yet";
+  const rankingSubtitle = userPosition ? "Global ranking" : "No data yet";
 
   return (
     <div className="space-y-6 overflow-x-clip">
@@ -320,7 +376,7 @@ export default function DashboardPage() {
               Welcome back, {user.name} 👋
             </h1>
             <p className="text-sm text-[#A1A1A1]">
-              {completedCount}/{habits.length} habits completed today
+              {completedCount}/{todaysHabits.length} habits completed today
             </p>
           </div>
           <StreakDisplay streak={user.streak} size="sm" />
@@ -350,6 +406,8 @@ export default function DashboardPage() {
           <ChallengeCard
             currentDay={challenge.currentDay}
             totalDays={challenge.totalDays}
+            monthCurrentDay={challenge.monthCurrentDay}
+            monthTotalDays={challenge.monthTotalDays}
             habitsCompletedToday={challenge.habitsCompletedToday}
             totalHabitsToday={challenge.totalHabitsToday}
             daysRemaining={challenge.daysRemaining}
@@ -391,7 +449,7 @@ export default function DashboardPage() {
         />
         <StatsCard
           title="Completed"
-          value={`${completedCount}/${habits.length}`}
+          value={`${completedCount}/${todaysHabits.length}`}
           subtitle="habits today"
           icon={CheckCircle2}
           iconColor="text-emerald-400"
@@ -416,7 +474,7 @@ export default function DashboardPage() {
             </Link>
           </div>
           <div className="space-y-2">
-            {habits.length === 0 ? (
+            {todaysHabits.length === 0 ? (
               <div className="rounded-2xl border border-white/[0.06] bg-[#121212] p-8 text-center">
                 <p className="text-[#A1A1A1] text-sm">
                   No habits yet.{" "}
@@ -429,7 +487,7 @@ export default function DashboardPage() {
                 </p>
               </div>
             ) : (
-              habits.map((habit) => (
+              todaysHabits.map((habit) => (
                 <HabitCard
                   key={habit.id}
                   id={habit.id}
@@ -528,8 +586,8 @@ export default function DashboardPage() {
                       entry.isPlaceholder
                         ? "opacity-60"
                         : entry.isCurrentUser
-                        ? "bg-[#FF7A00]/[0.06]"
-                        : "hover:bg-white/[0.02]"
+                          ? "bg-[#FF7A00]/[0.06]"
+                          : "hover:bg-white/[0.02]"
                     }`}
                   >
                     <span
@@ -567,9 +625,9 @@ export default function DashboardPage() {
                     >
                       {entry.isPlaceholder ? "No player yet" : entry.name}
                       {entry.isCurrentUser && !entry.isPlaceholder && (
-                        <span className="text-[#A1A1A1] text-xs ml-1">
-                          (you)
-                        </span>
+              <span className="text-[#A1A1A1] text-xs ml-1">
+                (You)
+              </span>
                       )}
                     </span>
                     <span className="text-xs font-semibold text-[#FF7A00]">

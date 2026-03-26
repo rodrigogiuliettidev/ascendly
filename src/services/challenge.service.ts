@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { getScheduledHabitsToday } from "./habit.service";
+import { getMonthProgress } from "@/lib/date";
 import type { ChallengeProgress } from "@/types";
 
 /**
@@ -36,6 +37,7 @@ export async function getChallengeProgress(
 ): Promise<ChallengeProgress> {
   const challenge = await getChallenge(userId);
   const todayHabits = await getScheduledHabitsToday(userId);
+  const monthProgress = getMonthProgress();
 
   const habitsCompletedToday = todayHabits.filter(
     (h) => h.completedToday,
@@ -49,6 +51,8 @@ export async function getChallengeProgress(
   return {
     currentDay: challenge.currentDay,
     totalDays: challenge.totalDays,
+    monthCurrentDay: monthProgress.currentDay,
+    monthTotalDays: monthProgress.totalDays,
     startDate: challenge.startDate,
     isActive: challenge.isActive,
     habitsCompletedToday,

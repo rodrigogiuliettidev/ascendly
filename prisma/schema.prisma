@@ -49,6 +49,7 @@ model Habit {
   coinReward   Int      @default(10)
   penaltyXp    Int      @default(5)
   reminderTime Int?
+  schedule     String[] @default(["sun", "mon", "tue", "wed", "thu", "fri", "sat"])
   daysOfWeek   Int[]    @default([0, 1, 2, 3, 4, 5, 6])
   isActive     Boolean  @default(true)
   createdAt    DateTime @default(now())

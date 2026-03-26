@@ -21,6 +21,9 @@ export async function POST(
     if (message === "Habit already completed today") {
       return NextResponse.json({ error: message }, { status: 409 });
     }
+    if (message === "Habit is not scheduled for today") {
+      return NextResponse.json({ error: message }, { status: 400 });
+    }
 
     console.error("POST /api/habits/[id]/complete error:", error);
     return NextResponse.json({ error: message }, { status: 500 });

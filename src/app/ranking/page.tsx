@@ -236,7 +236,9 @@ function PodiumCard({
     <div
       className={cn(
         "flex flex-col items-center rounded-2xl border p-4 transition-all animate-slide-up",
-        entry.isPlaceholder ? "bg-[#111111] border-white/[0.06] opacity-60" : colors.bg,
+        entry.isPlaceholder
+          ? "bg-[#111111] border-white/[0.06] opacity-60"
+          : colors.bg,
         entry.isPlaceholder ? "" : colors.border,
         isFirst ? "py-6" : "py-4",
       )}
@@ -251,10 +253,10 @@ function PodiumCard({
           entry.isPlaceholder
             ? "bg-white/[0.06] text-[#9CA3AF]"
             : pos === 1
-            ? "bg-[#FFD700]/20 text-[#FFD700]"
-            : pos === 2
-              ? "bg-[#C0C0C0]/20 text-[#C0C0C0]"
-              : "bg-[#CD7F32]/20 text-[#CD7F32]",
+              ? "bg-[#FFD700]/20 text-[#FFD700]"
+              : pos === 2
+                ? "bg-[#C0C0C0]/20 text-[#C0C0C0]"
+                : "bg-[#CD7F32]/20 text-[#CD7F32]",
         )}
       >
         {pos}

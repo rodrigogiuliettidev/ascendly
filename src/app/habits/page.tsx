@@ -36,8 +36,10 @@ interface HabitData {
   xpReward: number;
   coinReward: number;
   reminderTime: number | null;
+  schedule: string[];
   daysOfWeek: number[];
   completedToday: boolean;
+  scheduledToday?: boolean;
 }
 
 const WEEKDAYS = [
@@ -54,7 +56,7 @@ const WEEKDAYS = [
 
 export default function HabitsPage() {
   const { user } = useAuth();
-  const { get, post, del } = useApi();
+  const { get, post, patch, del } = useApi();
 
   const [habits, setHabits] = useState<HabitData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -66,7 +68,8 @@ export default function HabitsPage() {
     xpReward: "25",
     coinReward: "10",
     reminderTime: "",
-    daysOfWeek: [0, 1, 2, 3, 4, 5, 6] as number[],
+      daysOfWeek: [0, 1, 2, 3, 4, 5, 6] as number[],
+      schedule: ["sun", "mon", "tue", "wed", "thu", "fri", "sat"] as string[],
   });
   const [saving, setSaving] = useState(false);
   const [xpToast, setXpToast] = useState<{
@@ -126,6 +129,7 @@ export default function HabitsPage() {
       coinReward: "10",
       reminderTime: "",
       daysOfWeek: [0, 1, 2, 3, 4, 5, 6],
+      schedule: ["sun", "mon", "tue", "wed", "thu", "fri", "sat"],
     });
     setDialogOpen(true);
   };
@@ -142,6 +146,10 @@ export default function HabitsPage() {
           ? `${String(Math.floor(habit.reminderTime / 60)).padStart(2, "0")}:${String(habit.reminderTime % 60).padStart(2, "0")}`
           : "",
       daysOfWeek: habit.daysOfWeek || [0, 1, 2, 3, 4, 5, 6],
+      schedule:
+        habit.schedule && habit.schedule.length > 0
+          ? habit.schedule
+          : ["sun", "mon", "tue", "wed", "thu", "fri", "sat"],
     });
     setDialogOpen(true);
   };
@@ -152,6 +160,12 @@ export default function HabitsPage() {
       daysOfWeek: prev.daysOfWeek.includes(day)
         ? prev.daysOfWeek.filter((d) => d !== day)
         : [...prev.daysOfWeek, day],
+      schedule: (prev.daysOfWeek.includes(day)
+        ? prev.daysOfWeek.filter((d) => d !== day)
+        : [...prev.daysOfWeek, day]
+      )
+        .map((d) => WEEKDAYS.find((w) => w.value === d)?.label.toLowerCase())
+        .filter(Boolean) as string[],
     }));
   };
 
@@ -169,20 +183,23 @@ export default function HabitsPage() {
 
     try {
       if (editingHabit) {
-        // For now, just update locally (edit API can be added later)
+        const updatedHabit = await patch<HabitData>("/api/habits", {
+          id: editingHabit.id,
+          title: form.title,
+          description: form.description || undefined,
+          xpReward: Number(form.xpReward) || 25,
+          coinReward: Number(form.coinReward) || 10,
+          reminderTime: reminderMinutes,
+          schedule: form.schedule,
+          daysOfWeek: form.daysOfWeek,
+        });
         setHabits((prev) =>
           prev.map((h) =>
             h.id === editingHabit.id
               ? {
-                  ...h,
-                  title: form.title,
-                  description: form.description,
-                  xpReward: Number(form.xpReward) || 25,
-                  coinReward: Number(form.coinReward) || 10,
-                  reminderTime: reminderMinutes
-                    ? Number(reminderMinutes)
-                    : null,
-                  daysOfWeek: form.daysOfWeek,
+                  ...updatedHabit,
+                  completedToday: h.completedToday,
+                  scheduledToday: h.scheduledToday,
                 }
               : h,
           ),
@@ -194,11 +211,17 @@ export default function HabitsPage() {
           xpReward: Number(form.xpReward) || 25,
           coinReward: Number(form.coinReward) || 10,
           reminderTime: reminderMinutes,
+          schedule: form.schedule,
           daysOfWeek: form.daysOfWeek,
         });
         setHabits((prev) => [
           ...prev,
-          { ...newHabit, completedToday: false, daysOfWeek: form.daysOfWeek },
+          {
+            ...newHabit,
+            completedToday: false,
+            schedule: form.schedule,
+            daysOfWeek: form.daysOfWeek,
+          },
         ]);
       }
       setDialogOpen(false);
@@ -234,10 +257,10 @@ export default function HabitsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-white">My Habits</h1>
-          <p className="text-sm text-[#A1A1A1]">
+            <h1 className="text-xl font-bold text-white">My Habits</h1>
+            <p className="text-sm text-[#A1A1A1]">
             {completedCount} of {habits.length} completed today
-          </p>
+            </p>
         </div>
         {/* Desktop add button */}
         <Button onClick={openCreateDialog} className="hidden sm:flex gap-2">
@@ -291,15 +314,23 @@ export default function HabitsPage() {
               <div className="flex items-center gap-4">
                 {/* Completion toggle */}
                 <button
-                  onClick={() =>
-                    !habit.completedToday && handleComplete(habit.id)
+                  onClick={() => {
+                    if (habit.completedToday || habit.scheduledToday === false) return;
+                    handleComplete(habit.id);
+                  }}
+                  disabled={habit.completedToday || habit.scheduledToday === false}
+                  title={
+                    habit.scheduledToday === false
+                      ? "This habit is not active today"
+                      : undefined
                   }
-                  disabled={habit.completedToday}
                   className={cn(
                     "flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border-2 transition-all duration-300",
                     habit.completedToday
                       ? "border-[#FF7A00] bg-[#FF7A00] text-white shadow-lg shadow-[#FF7A00]/25"
-                      : "border-white/15 text-transparent hover:border-[#FF7A00]/50 hover:text-[#FF7A00]/50 active:scale-90",
+                      : habit.scheduledToday !== false
+                        ? "border-white/15 text-transparent hover:border-[#FF7A00]/50 hover:text-[#FF7A00]/50 active:scale-90"
+                        : "border-white/10 text-transparent opacity-40 cursor-not-allowed",
                   )}
                 >
                   <Check className="h-6 w-6" strokeWidth={3} />

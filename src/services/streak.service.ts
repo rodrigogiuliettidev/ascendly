@@ -4,6 +4,7 @@ import {
   getDayOfWeekInAppTimeZone,
   getLogicalDateString,
 } from "@/lib/date";
+import { hasScheduledDay, dayIndexToKey } from "@/lib/habit-schedule";
 
 export interface StreakResult {
   streak: number;
@@ -31,7 +32,7 @@ export async function updateStreak(userId: string): Promise<StreakResult> {
     }),
     prisma.habit.findMany({
       where: { userId, isActive: true },
-      select: { id: true, daysOfWeek: true, createdAt: true },
+      select: { id: true, schedule: true, daysOfWeek: true, createdAt: true },
     }),
     prisma.habitCompletion.findFirst({
       where: { userId },
@@ -51,18 +52,16 @@ export async function updateStreak(userId: string): Promise<StreakResult> {
     return { streak: 0, maintained: false, reset: user.streak > 0 };
   }
 
-  const earliestHabitDate = activeHabits.reduce<Date>(
-    (min, habit) => (habit.createdAt < min ? habit.createdAt : min),
-    activeHabits[0].createdAt,
+  const MAX_LOOKBACK_DAYS = 365;
+  const lookbackStart = new Date(
+    todayStart.getTime() - MAX_LOOKBACK_DAYS * 24 * 60 * 60 * 1000,
   );
-  const earliestStart = startOfDay(earliestHabitDate);
-
   const completions = await prisma.habitCompletion.findMany({
     where: {
       userId,
       habitId: { in: activeHabits.map((h) => h.id) },
       completionDate: {
-        gte: earliestStart,
+        gte: lookbackStart,
         lte: todayStart,
       },
     },
@@ -83,11 +82,11 @@ export async function updateStreak(userId: string): Promise<StreakResult> {
   );
 
   const MS_PER_DAY = 24 * 60 * 60 * 1000;
-  const totalDays =
-    Math.floor((todayStart.getTime() - earliestStart.getTime()) / MS_PER_DAY) +
-    1;
+  const totalDays = MAX_LOOKBACK_DAYS + 1;
 
   let newStreak = 0;
+  let encounteredScheduledDay = false;
+  let forcedResetFromYesterdayMiss = false;
 
   for (let offset = 0; offset < totalDays; offset++) {
     const dayDate = new Date(todayStart.getTime() - offset * MS_PER_DAY);
@@ -96,13 +95,15 @@ export async function updateStreak(userId: string): Promise<StreakResult> {
 
     const scheduledHabits = activeHabits.filter(
       (habit) =>
-        habit.daysOfWeek.includes(dayOfWeek) &&
+        hasScheduledDay(habit.schedule, habit.daysOfWeek, dayOfWeek) &&
         getLogicalDateString(habit.createdAt) <= dayString,
     );
 
     if (scheduledHabits.length === 0) {
       continue;
     }
+
+    encounteredScheduledDay = true;
 
     const completedSet = completionMap.get(dayString) ?? new Set<string>();
     const allScheduledCompleted = scheduledHabits.every((habit) =>
@@ -115,10 +116,26 @@ export async function updateStreak(userId: string): Promise<StreakResult> {
     );
 
     if (!allScheduledCompleted) {
+      if (offset === 1 && newStreak > 0) {
+        // Product rule: if yesterday was incomplete, today's streak must be 0.
+        forcedResetFromYesterdayMiss = true;
+      }
       break;
     }
 
     newStreak++;
+  }
+
+  if (forcedResetFromYesterdayMiss) {
+    newStreak = 0;
+  }
+
+  // If user has scheduled habits but the nearest scheduled day is incomplete,
+  // streak is guaranteed to be 0 (handled above). This log highlights that case.
+  if (encounteredScheduledDay && newStreak === 0) {
+    console.log(
+      `[StreakService] user=${userId} streak reset to 0 due to missed scheduled day`,
+    );
   }
 
   await prisma.user.update({
@@ -156,13 +173,17 @@ export async function isStreakAtRisk(userId: string): Promise<boolean> {
   const now = new Date();
   const todayStart = startOfDay(now);
   const dayOfWeek = getDayOfWeekInAppTimeZone(now);
+  const dayKey = dayIndexToKey(dayOfWeek);
 
   // Get scheduled habits for today
   const scheduledCount = await prisma.habit.count({
     where: {
       userId,
       isActive: true,
-      daysOfWeek: { has: dayOfWeek },
+      OR: [
+        { schedule: { has: dayKey } },
+        { daysOfWeek: { has: dayOfWeek } },
+      ],
     },
   });
 
